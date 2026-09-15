@@ -1,0 +1,58 @@
+---
+import Shell from '../../layouts/Shell.astro';
+import ReportIndex from '../../components/ReportIndex.astro';
+import EmptyState from '../../components/EmptyState.astro';
+import { getEnv } from '../../lib/env';
+import { S3Error } from '../../lib/s3';
+import { latestReport, loadReports, summaryCaption, type ReportMeta } from '../../lib/reports';
+import { buildWeekSummaries } from '../../lib/schedule';
+import { PAGE_CACHE_CONTROL } from '../../lib/cache';
+
+const env = getEnv();
+const bypass = Astro.url.searchParams.get('nocache') === '1';
+
+Astro.response.headers.set('Cache-Control', PAGE_CACHE_CONTROL);
+
+let reports: ReportMeta[];
+let emptyReason: string | null = null;
+try {
+  reports = await loadReports(env, bypass);
+} catch (err) {
+  reports = [];
+  emptyReason = err instanceof S3Error ? err.message : 'S3 is unreachable.';
+}
+
+const now = new Date();
+const weekSummaries = !emptyReason ? buildWeekSummaries(reports, now) : [];
+const latest = latestReport(reports);
+---
+
+<Shell title="All reports · Down to the Wire" activeTab="reports">
+  <h1 class="dttw-page-title">All reports</h1>
+  {emptyReason ? (
+    <EmptyState reason={emptyReason} />
+  ) : (
+    <>
+      <ReportIndex
+        weeks={weekSummaries}
+        currentKey={latest?.key}
+        openWeeks={weekSummaries.map((w) => w.week)}
+      />
+      <p class="dttw-caption">{summaryCaption(reports)}</p>
+    </>
+  )}
+</Shell>
+
+<style>
+  .dttw-page-title {
+    font: var(--type-title-1);
+    letter-spacing: var(--ls-title-1);
+    color: var(--text-primary);
+    margin: 0;
+  }
+  .dttw-caption {
+    margin: var(--space-4) 0 0;
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+</style>

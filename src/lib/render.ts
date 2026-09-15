@@ -1,0 +1,111 @@
+import { marked, type Tokens } from 'marked';
+
+export interface FreshnessEntry {
+  feed: string;
+  timestamp: string;
+}
+
+export interface RenderedReport {
+  bodyHtml: string;
+  freshness: FreshnessEntry[];
+  cannotSeeHtml: string | null;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-');
+}
+
+/**
+ * Recognizes the literal `insufficient data` sentinel as its own inline
+ * token, so the match happens before HTML exists — an attribute value can
+ * never be caught by it the way a post-render regex could catch one.
+ */
+const sentinelExtension = {
+  name: 'insufficientData',
+  level: 'inline' as const,
+  start(src: string) {
+    return src.match(/insufficient data/)?.index;
+  },
+  tokenizer(src: string) {
+    const match = /^insufficient data/.exec(src);
+    if (!match) return undefined;
+    return { type: 'insufficientData', raw: match[0], text: match[0] };
+  },
+  renderer(token: { text: string }) {
+    return `<span class="stale">${token.text}</span>`;
+  },
+};
+
+marked.use({
+  extensions: [sentinelExtension],
+  renderer: {
+    // Reports are ours, but escaping raw HTML at the token level costs one
+    // line and removes the injection class without a sanitizer dependency.
+    html(token: Tokens.HTML | Tokens.Tag) {
+      return escapeHtml(token.text);
+    },
+    heading(token: Tokens.Heading) {
+      const inner = this.parser.parseInline(token.tokens);
+      const id = slugify(token.text);
+      return `<h${token.depth} id="${id}">${inner}</h${token.depth}>\n`;
+    },
+  },
+});
+
+// `(?![\s\S])` is a true end-of-string assertion — plain `$` under the `/m`
+// flag matches the end of *any* line, which truncated these captures to
+// their first bullet.
+const FRESHNESS_RE = /^##\s+Freshness\s*\n([\s\S]*?)\n*(?=\n##\s|(?![\s\S]))/m;
+const CANNOT_SEE_RE = /^##\s+What this report cannot see\s*\n([\s\S]*?)\n*(?=\n##\s|(?![\s\S]))/m;
+const FRESHNESS_LINE_RE = /^-\s*([\w.]+):\s*(.+)$/gm;
+
+function parseFreshnessEntries(section: string): FreshnessEntry[] {
+  const entries: FreshnessEntry[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = FRESHNESS_LINE_RE.exec(section))) {
+    entries.push({ feed: m[1], timestamp: m[2].trim() });
+  }
+  return entries;
+}
+
+/**
+ * Three markdown-aware touches, each guarded so a report day that omits
+ * the section simply renders normally:
+ *  1. Lift `## Freshness` out of the body into a compact row.
+ *  2. Mark the `insufficient data` sentinel (via the extension above).
+ *  3. Set off `## What this report cannot see` as a closing callout.
+ */
+export function renderReport(markdown: string): RenderedReport {
+  let body = markdown.replace(/^#\s+.+\n?/, '');
+
+  let freshness: FreshnessEntry[] = [];
+  const freshnessMatch = FRESHNESS_RE.exec(body);
+  if (freshnessMatch) {
+    freshness = parseFreshnessEntries(freshnessMatch[1]);
+    body = body.slice(0, freshnessMatch.index) + body.slice(freshnessMatch.index + freshnessMatch[0].length);
+  }
+
+  let cannotSeeHtml: string | null = null;
+  const cannotSeeMatch = CANNOT_SEE_RE.exec(body);
+  if (cannotSeeMatch) {
+    cannotSeeHtml = marked.parse(cannotSeeMatch[1].trim(), { async: false }) as string;
+    body = body.slice(0, cannotSeeMatch.index) + body.slice(cannotSeeMatch.index + cannotSeeMatch[0].length);
+  }
+
+  const bodyHtml = marked.parse(body.trim(), { async: false }) as string;
+
+  return { bodyHtml, freshness, cannotSeeHtml };
+}

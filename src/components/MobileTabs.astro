@@ -1,0 +1,40 @@
+---
+import Icon from './ui/Icon.astro';
+
+export interface Props {
+  active: 'latest' | 'reports';
+}
+const { active } = Astro.props as Props;
+---
+
+<nav class="dttw-mobile-tabs" aria-label="Primary">
+  <a class="mtab" href="/" data-on={active === 'latest' ? 'true' : undefined}>
+    <Icon name="file-text" size={18} />
+    Latest
+  </a>
+  <a class="mtab" href="/reports" data-on={active === 'reports' ? 'true' : undefined}>
+    <Icon name="layout-dashboard" size={18} />
+    All reports
+  </a>
+</nav>
+
+<style>
+  .dttw-mobile-tabs {
+    display: none;
+  }
+
+  @media (max-width: 700px) {
+    .dttw-mobile-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      align-items: center;
+      justify-items: center;
+      height: 64px;
+      padding-bottom: var(--space-4);
+      border-top: var(--border-subtle);
+      position: sticky;
+      bottom: 0;
+      background: var(--surface-page);
+    }
+  }
+</style>

@@ -1,0 +1,29 @@
+---
+export interface Props {
+  reason: string;
+}
+const { reason } = Astro.props as Props;
+---
+
+<div class="dttw-empty">
+  <p class="dttw-empty__title">No report to show</p>
+  <p class="dttw-empty__reason">{reason}</p>
+</div>
+
+<style>
+  .dttw-empty {
+    padding: var(--space-10) var(--space-6);
+    text-align: center;
+  }
+  .dttw-empty__title {
+    font: var(--type-title-3);
+    letter-spacing: var(--ls-title-3);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-2);
+  }
+  .dttw-empty__reason {
+    font: var(--type-body-sm);
+    color: var(--text-muted);
+    margin: 0;
+  }
+</style>

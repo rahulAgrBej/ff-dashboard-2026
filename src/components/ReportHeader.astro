@@ -1,0 +1,106 @@
+---
+import Badge from './ui/Badge.astro';
+
+export interface Props {
+  eyebrow?: string; // "Most recent"
+  weekLabel: string; // "Week 3"
+  title: string;
+  generatedAt: string; // "12 Sep 2026, 00:12 ET"
+  typeKey: string; // "monday_night_call"
+}
+const { eyebrow = 'Most recent', weekLabel, title, generatedAt, typeKey } = Astro.props as Props;
+---
+
+<div class="dttw-header dttw-header--desktop">
+  <div>
+    <div class="dttw-header__row">
+      <span class="flabel">{eyebrow}</span>
+      <Badge tone="neutral">{weekLabel}</Badge>
+    </div>
+    <h1 class="dttw-header__title">{title}</h1>
+    <p class="dttw-header__meta">Generated {generatedAt} · <code>{typeKey}</code></p>
+  </div>
+</div>
+
+<div class="dttw-header dttw-header--mobile">
+  <div class="dttw-header__mobile-text">
+    <div class="flabel">{eyebrow} · {weekLabel}</div>
+    <div class="dttw-header__title-sm">{title}</div>
+  </div>
+  <a href="/reports" class="dttw-header__all">All ▾</a>
+</div>
+<p class="dttw-header__meta dttw-header__meta--mobile">{generatedAt}</p>
+
+<style>
+  .dttw-header--desktop {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-5);
+    padding-bottom: var(--space-5);
+    border-bottom: var(--border-subtle);
+  }
+  .dttw-header__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+  .dttw-header__title {
+    margin: 0;
+    font: var(--type-title-1);
+    letter-spacing: var(--ls-title-1);
+    color: var(--text-primary);
+  }
+  .dttw-header__meta {
+    margin: var(--space-3) 0 0;
+    font: var(--type-data);
+    color: var(--text-muted);
+  }
+  .dttw-header__meta code {
+    background: var(--surface-muted);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  .dttw-header--mobile {
+    display: none;
+  }
+  .dttw-header__meta--mobile {
+    display: none;
+  }
+
+  @media (max-width: 700px) {
+    .dttw-header--desktop {
+      display: none;
+    }
+    .dttw-header--mobile {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .dttw-header__mobile-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .dttw-header__title-sm {
+      font: var(--type-title-3);
+      letter-spacing: var(--ls-title-3);
+      color: var(--text-primary);
+    }
+    .dttw-header__all {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 11px;
+      border: 1px solid var(--line-default);
+      border-radius: 5px;
+      font: var(--type-body-sm);
+      color: var(--text-secondary);
+    }
+    .dttw-header__meta--mobile {
+      display: block;
+      margin: var(--space-5) 0;
+    }
+  }
+</style>

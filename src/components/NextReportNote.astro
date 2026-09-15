@@ -1,0 +1,23 @@
+---
+import { dayLabel, type MergedSlot } from '../lib/schedule';
+
+export interface Props {
+  nextSlot?: MergedSlot;
+}
+const { nextSlot } = Astro.props as Props;
+---
+
+{nextSlot && (
+  <div class="dttw-next-note">
+    {dayLabel(nextSlot.day)} report lands {nextSlot.timeEt} ET.
+  </div>
+)}
+
+<style>
+  .dttw-next-note {
+    border-top: var(--border-subtle);
+    padding-top: var(--space-5);
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+</style>

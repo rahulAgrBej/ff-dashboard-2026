@@ -1,0 +1,61 @@
+---
+export interface Props {
+  variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md';
+  as?: 'button' | 'a';
+  href?: string;
+  id?: string;
+  class?: string;
+  type?: 'button' | 'submit';
+}
+
+const { variant = 'primary', size = 'sm', as = 'button', href, id, class: className, type = 'button', ...rest } =
+  Astro.props as Props & Record<string, string>;
+const Tag = as;
+---
+
+<Tag
+  id={id}
+  href={as === 'a' ? href : undefined}
+  type={as === 'button' ? type : undefined}
+  class:list={['dttw-btn', `dttw-btn--${variant}`, `dttw-btn--${size}`, className]}
+  {...rest}
+>
+  <slot />
+</Tag>
+
+<style>
+  .dttw-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    border-radius: 5px;
+    font: var(--type-body-sm);
+    cursor: pointer;
+    transition: var(--transition-control);
+    white-space: nowrap;
+  }
+  .dttw-btn--sm {
+    padding: 6px 11px;
+  }
+  .dttw-btn--md {
+    padding: 8px 14px;
+  }
+  .dttw-btn--secondary {
+    background: var(--white);
+    border: 1px solid var(--line-default);
+    color: var(--text-secondary);
+  }
+  .dttw-btn--secondary:hover {
+    background: var(--surface-hover);
+  }
+  .dttw-btn--primary {
+    background: var(--grey-900);
+    border: 1px solid var(--grey-900);
+    color: var(--white);
+    font-weight: var(--fw-medium);
+  }
+  .dttw-btn--primary:hover {
+    opacity: 0.9;
+  }
+</style>

@@ -1,0 +1,90 @@
+---
+import { dayLabel, type MergedSlot } from '../lib/schedule';
+import { reportUrl } from '../lib/reports';
+
+export interface WeekGroup {
+  season: number;
+  week: number;
+  label: string; // "Week 3 · 7–13 Sep"
+  slots: MergedSlot[];
+}
+
+export interface Props {
+  weeks: WeekGroup[];
+  currentKey?: string;
+  openWeeks?: number[];
+}
+const { weeks, currentKey, openWeeks = [] } = Astro.props as Props;
+
+function rowLabel(slot: MergedSlot): string {
+  const siblingCount = weeks.length ? weeks[0].slots.filter((s) => s.day === slot.day).length : 1;
+  if (siblingCount > 1 && slot.short) return `${dayLabel(slot.day)} · ${slot.short}`;
+  return dayLabel(slot.day);
+}
+
+function formatShortDate(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${d} ${months[m - 1]}`;
+}
+---
+
+<div class="dttw-index">
+  {weeks.map((w) => (
+    <details open={openWeeks.includes(w.week)}>
+      <summary class="wkbtn">
+        {w.label}
+        <span class="wkcount">{w.slots.filter((s) => s.state === 'published').length}</span>
+      </summary>
+      <div class="dttw-index__rows">
+        {w.slots.map((slot) =>
+          slot.state === 'published' && slot.report ? (
+            <a
+              class="ixrow"
+              href={reportUrl(slot.report)}
+              data-on={slot.report.key === currentKey ? 'true' : undefined}
+            >
+              {rowLabel(slot)}
+              <span class="ixdate">{formatShortDate(slot.report.date)}</span>
+            </a>
+          ) : slot.state === 'pending' ? (
+            <div class="ixrow" data-pending="true">
+              {rowLabel(slot)}
+              <span class="ixdate">pending</span>
+            </div>
+          ) : (
+            <div class="ixrow" data-planned="true">
+              {rowLabel(slot)}
+              <span class="ixdate">planned</span>
+            </div>
+          )
+        )}
+      </div>
+    </details>
+  ))}
+</div>
+
+<style>
+  .dttw-index {
+    display: flex;
+    flex-direction: column;
+  }
+  details {
+    border-bottom: none;
+  }
+  details + details {
+    margin-top: var(--space-2);
+  }
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  .dttw-index__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 2px;
+  }
+</style>

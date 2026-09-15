@@ -1,0 +1,128 @@
+---
+import Topbar from '../components/Topbar.astro';
+import MobileTabs from '../components/MobileTabs.astro';
+import '../styles/global.css';
+import '../styles/print.css';
+
+export interface Props {
+  title: string;
+  activeTab: 'latest' | 'reports';
+  showTopbarActions?: boolean;
+  hasAside?: boolean;
+}
+const { title, activeTab, showTopbarActions = false, hasAside = false } = Astro.props as Props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <div class="dttw-shell">
+      <Topbar showActions={showTopbarActions}>
+        <Fragment slot="actions"><slot name="topbar-actions" /></Fragment>
+      </Topbar>
+      <div class="dttw-body">
+        <main class="dttw-content">
+          <slot />
+        </main>
+        {hasAside && (
+          <aside class="dttw-aside">
+            <slot name="aside" />
+          </aside>
+        )}
+      </div>
+      <MobileTabs active={activeTab} />
+    </div>
+
+    <script>
+      // @ts-nocheck — plain browser glue, not worth full type rigor.
+      (function () {
+        var STORAGE_KEY = 'dttw-view';
+        var view = document.getElementById('dttw-view');
+        var raw = document.getElementById('dttw-raw');
+
+        function apply(mode) {
+          if (view) view.setAttribute('data-view', mode);
+          document.querySelectorAll('[data-view-btn]').forEach(function (btn) {
+            btn.setAttribute('data-on', btn.getAttribute('data-view-btn') === mode ? 'true' : 'false');
+          });
+        }
+
+        try {
+          var stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) apply(stored);
+        } catch (e) {}
+
+        document.querySelectorAll('[data-view-btn]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var mode = btn.getAttribute('data-view-btn') || 'rendered';
+            apply(mode);
+            try {
+              localStorage.setItem(STORAGE_KEY, mode);
+            } catch (e) {}
+          });
+        });
+
+        var printBtn = document.querySelector('[data-action="print"]');
+        if (printBtn) printBtn.addEventListener('click', function () { window.print(); });
+
+        var copyBtn = document.querySelector('[data-action="copy"]');
+        if (copyBtn && raw) {
+          copyBtn.addEventListener('click', function () {
+            navigator.clipboard.writeText(raw.textContent || '').then(function () {
+              var label = copyBtn.querySelector('[data-copy-label]');
+              var original = label ? label.textContent : null;
+              if (label) label.textContent = 'Copied';
+              setTimeout(function () {
+                if (label && original) label.textContent = original;
+              }, 1500);
+            });
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  .dttw-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  .dttw-body {
+    display: flex;
+    gap: var(--space-7);
+    align-items: flex-start;
+    padding: var(--space-7) var(--space-8) var(--space-10);
+    max-width: 1240px;
+    width: 100%;
+    margin: 0 auto;
+    flex: 1;
+  }
+  .dttw-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  .dttw-aside {
+    flex: 0 0 272px;
+  }
+
+  @media (max-width: 700px) {
+    .dttw-body {
+      flex-direction: column;
+      padding: var(--space-6);
+      padding-bottom: var(--space-4);
+    }
+    .dttw-aside {
+      display: none;
+    }
+  }
+</style>

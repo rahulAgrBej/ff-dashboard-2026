@@ -1,0 +1,24 @@
+@media print {
+  .dttw-topbar,
+  .dttw-aside,
+  .dttw-mobile-tabs,
+  .dttw-next-note {
+    display: none !important;
+  }
+
+  .dttw-shell {
+    display: block !important;
+  }
+
+  .dttw-content {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  [data-view='raw'] {
+    display: none !important;
+  }
+  [data-view='rendered'] {
+    display: block !important;
+  }
+}

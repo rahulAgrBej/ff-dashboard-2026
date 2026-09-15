@@ -1,0 +1,101 @@
+---
+import Shell from '../layouts/Shell.astro';
+import ReportHeader from '../components/ReportHeader.astro';
+import FreshnessRow from '../components/FreshnessRow.astro';
+import ReportArticle from '../components/ReportArticle.astro';
+import NextReportNote from '../components/NextReportNote.astro';
+import ReportIndex from '../components/ReportIndex.astro';
+import EmptyState from '../components/EmptyState.astro';
+import Card from '../components/ui/Card.astro';
+import Icon from '../components/ui/Icon.astro';
+import Button from '../components/ui/Button.astro';
+import { getEnv } from '../lib/env';
+import { getObject, S3Error } from '../lib/s3';
+import { getCachedBody, PAGE_CACHE_CONTROL } from '../lib/cache';
+import { extractTitle, formatGeneratedAt, latestReport, loadReports, summaryCaption, type ReportMeta } from '../lib/reports';
+import { renderReport } from '../lib/render';
+import { buildWeekSummaries, nextReportNote } from '../lib/schedule';
+
+const env = getEnv();
+const bypass = Astro.url.searchParams.get('nocache') === '1';
+
+Astro.response.headers.set('Cache-Control', PAGE_CACHE_CONTROL);
+
+let reports: ReportMeta[];
+let emptyReason: string | null = null;
+try {
+  reports = await loadReports(env, bypass);
+} catch (err) {
+  reports = [];
+  emptyReason = err instanceof S3Error ? err.message : 'S3 is unreachable.';
+}
+
+const latest = !emptyReason ? latestReport(reports) : undefined;
+if (!emptyReason && !latest) emptyReason = 'No reports were found in the bucket.';
+
+let markdown = '';
+if (!emptyReason && latest) {
+  try {
+    markdown = await getCachedBody(latest.key, latest.etag, bypass, () => getObject(env, latest.key));
+  } catch (err) {
+    emptyReason = err instanceof S3Error ? err.message : 'Could not read the latest report.';
+  }
+}
+
+const now = new Date();
+const weekSummaries = !emptyReason ? buildWeekSummaries(reports, now) : [];
+const currentWeek = latest ? weekSummaries.find((w) => w.season === latest.season && w.week === latest.week) : undefined;
+const currentSlot = currentWeek?.slots.find((s) => s.report?.key === latest?.key);
+const upcoming = currentWeek ? nextReportNote(currentWeek.slots, currentSlot) : undefined;
+
+const title = markdown ? extractTitle(markdown) : 'Report';
+const rendered = markdown ? renderReport(markdown) : null;
+const generatedAt = latest ? formatGeneratedAt(latest.lastModified) : '';
+const typeKey = currentSlot?.key ?? latest?.day ?? '';
+---
+
+<Shell title={`${title} · Down to the Wire`} activeTab="latest" showTopbarActions={!emptyReason} hasAside={!emptyReason}>
+  {emptyReason ? (
+    <EmptyState reason={emptyReason} />
+  ) : (
+    <>
+      <ReportHeader
+        weekLabel={`Week ${latest!.week}`}
+        title={title}
+        generatedAt={generatedAt}
+        typeKey={typeKey}
+      />
+      <FreshnessRow entries={rendered!.freshness} />
+      <ReportArticle bodyHtml={rendered!.bodyHtml} rawMarkdown={markdown} cannotSeeHtml={rendered!.cannotSeeHtml} />
+      <NextReportNote nextSlot={upcoming} />
+    </>
+  )}
+
+  <Fragment slot="topbar-actions">
+    <div class="seg">
+      <button type="button" data-view-btn="rendered" data-on="true">Rendered</button>
+      <button type="button" data-view-btn="raw">Markdown</button>
+    </div>
+    <Button variant="secondary" size="sm" data-action="print">
+      <Icon name="printer" size={14} /> Print
+    </Button>
+    <Button variant="primary" size="sm" data-action="copy">
+      <Icon name="copy" size={14} /> <span data-copy-label>Copy markdown</span>
+    </Button>
+  </Fragment>
+
+  <Fragment slot="aside">
+    <Card title="All reports" subtitle="By week and day" padding="tight">
+      <ReportIndex weeks={weekSummaries} currentKey={latest?.key} openWeeks={currentWeek ? [currentWeek.week] : []} />
+    </Card>
+    <p class="dttw-caption">{summaryCaption(reports)}</p>
+  </Fragment>
+</Shell>
+
+<style>
+  .dttw-caption {
+    margin: var(--space-4) 0 0;
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+</style>

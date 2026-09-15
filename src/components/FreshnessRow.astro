@@ -1,0 +1,39 @@
+---
+import type { FreshnessEntry } from '../lib/render';
+
+export interface Props {
+  entries: FreshnessEntry[];
+}
+const { entries } = Astro.props as Props;
+---
+
+{entries.length > 0 && (
+  <p class="dttw-freshness">
+    {entries.map((e, i) => (
+      <>
+        {i > 0 && <span class="dttw-freshness__sep"> · </span>}
+        <code>{e.feed}</code> <span class="dttw-freshness__ts">{e.timestamp}</span>
+      </>
+    ))}
+  </p>
+)}
+
+<style>
+  .dttw-freshness {
+    margin: 0 0 var(--space-5);
+    font: var(--type-data);
+    color: var(--text-muted);
+  }
+  .dttw-freshness code {
+    background: var(--surface-muted);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--text-primary);
+  }
+  .dttw-freshness__ts {
+    color: var(--text-muted);
+  }
+  .dttw-freshness__sep {
+    color: var(--text-disabled);
+  }
+</style>

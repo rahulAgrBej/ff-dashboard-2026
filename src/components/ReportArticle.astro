@@ -1,0 +1,41 @@
+---
+export interface Props {
+  bodyHtml: string;
+  rawMarkdown: string;
+  cannotSeeHtml: string | null;
+}
+const { bodyHtml, rawMarkdown, cannotSeeHtml } = Astro.props as Props;
+---
+
+<div class="dttw-view" data-view="rendered" id="dttw-view">
+  <article class="md md-mobile" set:html={bodyHtml} />
+  {cannotSeeHtml && (
+    <div class="callout">
+      <div class="flabel">What this report cannot see</div>
+      <div class="md" set:html={cannotSeeHtml} />
+    </div>
+  )}
+  <pre class="raw" id="dttw-raw">{rawMarkdown}</pre>
+</div>
+
+<style>
+  .dttw-view .md {
+    max-width: 68ch;
+  }
+  .dttw-view[data-view='rendered'] .raw {
+    display: none;
+  }
+  .dttw-view[data-view='raw'] .md,
+  .dttw-view[data-view='raw'] .callout {
+    display: none;
+  }
+
+  @media (max-width: 700px) {
+    .dttw-view .md {
+      max-width: none;
+    }
+    .dttw-view .raw {
+      display: none !important;
+    }
+  }
+</style>

@@ -1,0 +1,57 @@
+---
+export interface Props {
+  showActions?: boolean;
+}
+const { showActions = false } = Astro.props as Props;
+---
+
+<header class="dttw-topbar">
+  <a href="/" class="dttw-wordmark">
+    <span class="dttw-wordmark__full">Down to the Wire<span class="dttw-wordmark__sub"> / Reports</span></span>
+  </a>
+  <div class="dttw-topbar__spacer"></div>
+  {showActions && (
+    <div class="dttw-topbar__actions">
+      <slot name="actions" />
+    </div>
+  )}
+</header>
+
+<style>
+  .dttw-topbar {
+    height: var(--topbar-h);
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    padding: 0 var(--space-8);
+    border-bottom: var(--border-subtle);
+  }
+  .dttw-wordmark {
+    font: var(--type-title-3);
+    letter-spacing: var(--ls-title-3);
+    color: var(--text-primary);
+  }
+  .dttw-wordmark:hover {
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+  .dttw-wordmark__sub {
+    color: var(--text-muted);
+    font-weight: var(--fw-regular);
+  }
+  .dttw-topbar__spacer {
+    flex: 1;
+  }
+  .dttw-topbar__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  @media (max-width: 700px) {
+    .dttw-topbar {
+      display: none;
+    }
+  }
+</style>

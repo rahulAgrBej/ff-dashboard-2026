@@ -1,0 +1,30 @@
+---
+export interface Props {
+  tone?: 'neutral' | 'alert';
+}
+
+const { tone = 'neutral' } = Astro.props as Props;
+---
+
+<span class:list={['dttw-badge', `dttw-badge--${tone}`]}>
+  <slot />
+</span>
+
+<style>
+  .dttw-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font: var(--type-caption);
+    font-weight: var(--fw-medium);
+  }
+  .dttw-badge--neutral {
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+  }
+  .dttw-badge--alert {
+    background: color-mix(in srgb, var(--alert-text) 12%, white);
+    color: var(--alert-text);
+  }
+</style>

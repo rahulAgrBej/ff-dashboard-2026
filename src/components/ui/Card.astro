@@ -1,0 +1,49 @@
+---
+export interface Props {
+  title?: string;
+  subtitle?: string;
+  padding?: 'normal' | 'tight';
+}
+
+const { title, subtitle, padding = 'normal' } = Astro.props as Props;
+---
+
+<div class:list={['dttw-card', `dttw-card--${padding}`]}>
+  {title && (
+    <div class="dttw-card__head">
+      <div class="dttw-card__title">{title}</div>
+      {subtitle && <div class="dttw-card__subtitle">{subtitle}</div>}
+    </div>
+  )}
+  <div class="dttw-card__body">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .dttw-card {
+    background: var(--surface-page);
+    border: var(--border-subtle);
+    border-radius: 8px;
+  }
+  .dttw-card--normal {
+    padding: var(--space-6);
+  }
+  .dttw-card--tight .dttw-card__head {
+    padding: var(--space-5) var(--space-4) 0;
+  }
+  .dttw-card--tight .dttw-card__body {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+  .dttw-card__title {
+    font: var(--type-title-3);
+    letter-spacing: var(--ls-title-3);
+    color: var(--text-primary);
+  }
+  .dttw-card__subtitle {
+    font: var(--type-caption);
+    color: var(--text-muted);
+    margin-top: 2px;
+    margin-bottom: var(--space-3);
+  }
+</style>
