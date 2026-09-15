@@ -87,6 +87,72 @@ button {
   color: var(--alert-text);
   font: var(--type-body-sm);
 }
+
+/* The 68ch measure belongs to prose, not to tables: a nine-column waiver table
+   should use the width the sidebar leaves. Every non-table child keeps the
+   clamp that used to sit on the article itself. */
+.md > :not(.md-table) {
+  max-width: 68ch;
+}
+
+/* Tables — GitHub's structure (shaded header, hairline grid, zebra rows,
+   tight padding, scroll on overflow) built from tokens.css. */
+.md .md-table {
+  margin: 0 0 12px;
+  border: 1px solid var(--line-default);
+  border-radius: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Without this, swiping a wide table past its scroll end on iOS fires the
+     back-navigation gesture and drops the reader out of the report. */
+  overscroll-behavior-x: contain;
+}
+.md table {
+  margin: 0;
+  border-collapse: collapse;
+  border-spacing: 0;
+  /* Wide tables keep every column legible and scroll; narrow ones still fill
+     the wrapper. `display: block` would scroll for free but destroys column
+     distribution, and the narrow shapes are the common case. */
+  width: max-content;
+  min-width: 100%;
+  font: var(--type-body-sm);
+  color: var(--text-secondary);
+}
+.md thead {
+  background: var(--surface-muted);
+}
+.md th,
+.md td {
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+  vertical-align: top;
+  /* Outer edge at --line-default, inner grid one step quieter: a uniform
+     grid across nine columns reads as graph paper. */
+  border-right: 1px solid var(--line-subtle);
+  border-bottom: 1px solid var(--line-subtle);
+}
+.md th {
+  color: var(--text-primary);
+  font-weight: var(--fw-medium);
+  border-bottom-color: var(--line-default);
+}
+.md tbody tr:nth-child(2n) {
+  background: var(--surface-sunken);
+}
+.md tr > *:last-child {
+  border-right: 0;
+}
+.md tbody tr:last-child > td {
+  border-bottom: 0;
+}
+/* `insufficient data` fills whole columns in the waiver tables, and .md .stale
+   resizes it — which would leave every row ragged. Keep the amber, drop the
+   size change. */
+.md th .stale,
+.md td .stale {
+  font: inherit;
+}
 @media (max-width: 700px) {
   .md-mobile p,
   .md-mobile li {
@@ -94,6 +160,18 @@ button {
   }
   .md-mobile h2 {
     margin: 20px 0 7px;
+  }
+  .md > :not(.md-table) {
+    max-width: none;
+  }
+  .md-mobile th,
+  .md-mobile td {
+    font: var(--type-caption);
+    padding: var(--space-1) var(--space-3);
+  }
+  /* The `font` shorthand above resets weight to 400. */
+  .md-mobile th {
+    font-weight: var(--fw-medium);
   }
 }
 

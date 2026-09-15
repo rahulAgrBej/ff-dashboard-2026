@@ -13,6 +13,11 @@
 - Flex started Devin Singletary (6.1) over bench Ronnie Rivers (0.0) -- no regret.
 - Started Team A's TE over bench WR who scored 14.2 more -- largest gap of the week.
 
+| slot | started | pts | best bench | pts | gap |
+|---|---|---|---|---|---|
+| RB/WR | Rhamondre Stevenson | 12.0 | Chuba Hubbard | 22.2 | 10.2 |
+| RB | Cam Skattebo | 14.1 | Chuba Hubbard | 22.2 | 8.1 |
+
 ## What this report cannot see
 - The regret table is retrospective only and is not a start/sit rule for the coming week.
 - Snap share and target share are not readable yet -- nflverse `provisional` is still `true` until Tuesday/Wednesday corrections land.

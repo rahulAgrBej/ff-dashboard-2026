@@ -1,4 +1,4 @@
-import { marked, type Tokens } from 'marked';
+import { marked, Renderer, type Tokens } from 'marked';
 
 export interface FreshnessEntry {
   feed: string;
@@ -61,6 +61,12 @@ marked.use({
       const inner = this.parser.parseInline(token.tokens);
       const id = slugify(token.text);
       return `<h${token.depth} id="${id}">${inner}</h${token.depth}>\n`;
+    },
+    // A nine-column waiver table cannot fit the article's measure. Wrapping is
+    // what lets the table keep `display: table` -- and therefore real column
+    // distribution for the narrow tables -- while still scrolling when wide.
+    table(token: Tokens.Table) {
+      return `<div class="md-table">${Renderer.prototype.table.call(this, token)}</div>\n`;
     },
   },
 });

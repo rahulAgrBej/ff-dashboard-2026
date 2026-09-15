@@ -19,8 +19,11 @@ const { bodyHtml, rawMarkdown, cannotSeeHtml } = Astro.props as Props;
 </div>
 
 <style>
+  /* The measure now lives on `.md > :not(.md-table)` in global.css, so tables
+     can use the full content column. Scoped styles cannot reach `set:html`
+     children, which is why it cannot stay here. */
   .dttw-view .md {
-    max-width: 68ch;
+    max-width: none;
   }
   .dttw-view[data-view='rendered'] .raw {
     display: none;
@@ -31,9 +34,6 @@ const { bodyHtml, rawMarkdown, cannotSeeHtml } = Astro.props as Props;
   }
 
   @media (max-width: 700px) {
-    .dttw-view .md {
-      max-width: none;
-    }
     .dttw-view .raw {
       display: none !important;
     }
