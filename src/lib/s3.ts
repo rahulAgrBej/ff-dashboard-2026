@@ -9,7 +9,7 @@ export interface S3Object {
 
 export interface S3Env {
   AWS_ACCESS_KEY_ID?: string;
-  AWS_SECRET_ACCESS_KEY?: string;
+  AWS_SECRET_ACCESS_KEY_ID?: string;
   AWS_REGION?: string;
   S3_BUCKET?: string;
   USE_FIXTURES?: string;
@@ -31,7 +31,7 @@ function endpointFor(env: S3Env) {
 
 function client(env: S3Env) {
   const accessKeyId = env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
+  const secretAccessKey = env.AWS_SECRET_ACCESS_KEY_ID;
   if (!accessKeyId || !secretAccessKey) {
     throw new S3Error('AWS credentials are not configured');
   }

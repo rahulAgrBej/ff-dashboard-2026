@@ -1,5 +1,5 @@
 AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
+AWS_SECRET_ACCESS_KEY_ID=
 
 # Set to 1 to serve fixtures/reports/** instead of calling S3 — no AWS
 # credentials needed. Must be set here (not as a shell env var prefix):

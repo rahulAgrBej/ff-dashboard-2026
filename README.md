@@ -33,7 +33,7 @@ This serves `fixtures/reports/**` — a synthetic 3-group tree exercising a Tues
 
 Note: `USE_FIXTURES` must be set in `.dev.vars`, not as a shell env var prefix (`USE_FIXTURES=1 npm run dev` does *not* work) — the dev server runs on workerd via the wrangler platform proxy, which only sees vars wrangler loads from `.dev.vars`, not the host shell's environment.
 
-**Against the real bucket.** Fill in `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` in `.dev.vars` (see "AWS bootstrap" below to obtain them), leave `USE_FIXTURES` unset, then `npm run dev`. The Cloudflare adapter runs on workerd via the wrangler platform proxy, so the Cache API and secrets behave the same as in production.
+**Against the real bucket.** Fill in `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY_ID` in `.dev.vars` (see "AWS bootstrap" below to obtain them), leave `USE_FIXTURES` unset, then `npm run dev`. The Cloudflare adapter runs on workerd via the wrangler platform proxy, so the Cache API and secrets behave the same as in production.
 
 Either way: `?nocache=1` on any URL bypasses the Cache API read for that request (and repopulates the cache with the fresh result — never a purge).
 
@@ -50,7 +50,7 @@ Either way: `?nocache=1` on any URL bypasses the Cache API read for that request
 ### Rotating the key
 
 1. Create a second access key for `ff-dashboard-reader` (IAM allows two active keys per user).
-2. `wrangler secret put AWS_ACCESS_KEY_ID` and `wrangler secret put AWS_SECRET_ACCESS_KEY` with the new key's values.
+2. `wrangler secret put AWS_ACCESS_KEY_ID` and `wrangler secret put AWS_SECRET_ACCESS_KEY_ID` with the new key's values.
 3. Confirm the deployed Worker is healthy (`/` renders), then deactivate and delete the old key in IAM.
 
 ## Deploy
@@ -61,7 +61,7 @@ Set the two secrets once, in the dashboard or via Wrangler:
 
 ```sh
 npx wrangler secret put AWS_ACCESS_KEY_ID
-npx wrangler secret put AWS_SECRET_ACCESS_KEY
+npx wrangler secret put AWS_SECRET_ACCESS_KEY_ID
 ```
 
 `AWS_REGION` and `S3_BUCKET` are plain vars already set in `wrangler.jsonc`.

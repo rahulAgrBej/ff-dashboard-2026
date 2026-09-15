@@ -6,7 +6,7 @@ export function getEnv(): S3Env {
   const runtimeEnv = workerEnv as unknown as Record<string, string | undefined>;
   return {
     AWS_ACCESS_KEY_ID: runtimeEnv.AWS_ACCESS_KEY_ID,
-    AWS_SECRET_ACCESS_KEY: runtimeEnv.AWS_SECRET_ACCESS_KEY,
+    AWS_SECRET_ACCESS_KEY_ID: runtimeEnv.AWS_SECRET_ACCESS_KEY_ID,
     AWS_REGION: runtimeEnv.AWS_REGION,
     S3_BUCKET: runtimeEnv.S3_BUCKET,
     USE_FIXTURES: runtimeEnv.USE_FIXTURES ?? (typeof process !== 'undefined' ? process.env.USE_FIXTURES : undefined),
