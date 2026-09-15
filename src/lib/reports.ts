@@ -40,20 +40,6 @@ export function parseReportKeys(objects: S3Object[]): ReportMeta[] {
   return parsed;
 }
 
-/** (date, week, season) descending, tiebroken on LastModified descending — semantic order first, upload time only breaks a same-day double-report tie (e.g. Tuesday's two reports). */
-export function sortReports(reports: ReportMeta[]): ReportMeta[] {
-  return [...reports].sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    if (a.week !== b.week) return a.week - b.week < 0 ? 1 : -1;
-    if (a.season !== b.season) return a.season - b.season < 0 ? 1 : -1;
-    return a.lastModified < b.lastModified ? 1 : a.lastModified > b.lastModified ? -1 : 0;
-  });
-}
-
-export function latestReport(reports: ReportMeta[]): ReportMeta | undefined {
-  return sortReports(reports)[0];
-}
-
 /** Title comes from the report's own H1, never the slug — the slug is a hardcoded, opaque URL segment upstream (see quirk #1). */
 export function extractTitle(markdown: string): string {
   const m = /^#\s+(.+)$/m.exec(markdown);

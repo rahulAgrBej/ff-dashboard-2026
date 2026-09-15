@@ -83,7 +83,14 @@ export interface MergedSlot {
   report?: ReportMeta;
 }
 
-/** Merges the 8-slot schedule against real reports for one (season, week). Matching is by day token first, then by slug when a day holds two slots (Tuesday). An unmatched real report is appended, never dropped — a real report is never hidden by the schedule model. */
+/** The one slot a report belongs to: by day token, disambiguated by slug when a day holds more than one slot (Tuesday). Report-driven (one report → its slot) rather than slot-driven, so a single report can never end up claimed by two slots. */
+function matchSlot(day: string, slug: string): ScheduleSlot | undefined {
+  const daySlots = SCHEDULE.filter((s) => s.day === day);
+  if (daySlots.length <= 1) return daySlots[0];
+  return daySlots.find((s) => s.key.split('_').every((part) => slug.includes(part))) ?? daySlots[0];
+}
+
+/** Merges the 8-slot schedule against real reports for one (season, week). An unmatched (or slot-colliding) real report is appended, never dropped — a real report is never hidden by the schedule model. */
 export function mergeSlots(
   reports: ReportMeta[],
   season: number,
@@ -92,24 +99,31 @@ export function mergeSlots(
 ): MergedSlot[] {
   const weekReports = reports.filter((r) => r.season === season && r.week === week);
   const range = weekDateRange(season, week);
-  const usedKeys = new Set<string>();
-  const merged: MergedSlot[] = [];
 
-  for (const slot of SCHEDULE) {
-    const candidates = weekReports.filter((r) => r.day === slot.day);
-    let match: ReportMeta | undefined;
-    if (candidates.length === 1) {
-      match = candidates[0];
-    } else if (candidates.length > 1) {
-      match =
-        candidates.find((r) => slot.key.split('_').every((part) => r.slug.includes(part))) ??
-        candidates[0];
+  const bySlotKey = new Map<string, ReportMeta>();
+  const extras: ReportMeta[] = [];
+  for (const r of weekReports) {
+    const slot = matchSlot(r.day, r.slug);
+    if (!slot) {
+      extras.push(r);
+      continue;
     }
+    const existing = bySlotKey.get(slot.key);
+    if (!existing) {
+      bySlotKey.set(slot.key, r);
+    } else if (r.lastModified > existing.lastModified) {
+      bySlotKey.set(slot.key, r);
+      extras.push(existing); // displaced by a newer report claiming the same slot — still rendered, not dropped
+    } else {
+      extras.push(r);
+    }
+  }
 
+  const merged: MergedSlot[] = SCHEDULE.map((slot) => {
+    const match = bySlotKey.get(slot.key);
     let state: SlotState;
     if (match) {
       state = 'published';
-      usedKeys.add(match.key);
     } else if (!IMPLEMENTED_DAYS.includes(slot.day)) {
       state = 'planned';
     } else {
@@ -117,7 +131,7 @@ export function mergeSlots(
       state = slotDateTime && slotDateTime <= now ? 'pending' : 'planned';
     }
 
-    merged.push({
+    return {
       order: slot.order,
       day: slot.day,
       timeEt: slot.timeEt,
@@ -126,23 +140,22 @@ export function mergeSlots(
       short: slot.short,
       state,
       report: match,
-    });
-  }
+    };
+  });
 
-  // Real reports the schedule model didn't match (unimplemented day, or an
-  // upstream naming drift) still render — the schedule only ever adds rows.
-  for (const r of weekReports) {
-    if (!usedKeys.has(r.key)) {
-      merged.push({
-        order: SCHEDULE.length + merged.length,
-        day: r.day,
-        timeEt: '',
-        key: r.slug,
-        title: r.day,
-        state: 'published',
-        report: r,
-      });
-    }
+  // Real reports the schedule model didn't match (unimplemented day, an
+  // upstream naming drift, or a slot collision above) still render — the
+  // schedule only ever adds rows.
+  for (const r of extras) {
+    merged.push({
+      order: SCHEDULE.length + merged.length,
+      day: r.day,
+      timeEt: '',
+      key: r.slug,
+      title: dayLabel(r.day),
+      state: 'published',
+      report: r,
+    });
   }
 
   return merged;
@@ -192,4 +205,25 @@ export function buildWeekSummaries(reports: ReportMeta[], now: Date): WeekSummar
 
 export function dayLabel(day: string): string {
   return day.charAt(0).toUpperCase() + day.slice(1);
+}
+
+/**
+ * Most recent (season, week), then furthest-along SCHEDULE slot within that
+ * week — never the raw `date` field, which is when a report was *generated*,
+ * not necessarily which calendar day it represents (the `day` token is a
+ * report type, not a derivable weekday — see quirk #2). Two backfilled
+ * reports can share an identical date and even an identical S3
+ * LastModified; `lastModified` only breaks a true same-slot tie (e.g. a
+ * same-day re-run), never a cross-slot one.
+ */
+export function latestReport(reports: ReportMeta[]): ReportMeta | undefined {
+  if (reports.length === 0) return undefined;
+  return [...reports].sort((a, b) => {
+    if (a.season !== b.season) return b.season - a.season;
+    if (a.week !== b.week) return b.week - a.week;
+    const orderA = matchSlot(a.day, a.slug)?.order ?? SCHEDULE.length + 1;
+    const orderB = matchSlot(b.day, b.slug)?.order ?? SCHEDULE.length + 1;
+    if (orderA !== orderB) return orderB - orderA;
+    return b.lastModified.localeCompare(a.lastModified);
+  })[0];
 }

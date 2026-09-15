@@ -12,9 +12,9 @@ import Button from '../components/ui/Button.astro';
 import { getEnv } from '../lib/env';
 import { getObject, S3Error } from '../lib/s3';
 import { getCachedBody, PAGE_CACHE_CONTROL } from '../lib/cache';
-import { extractTitle, formatGeneratedAt, latestReport, loadReports, summaryCaption, type ReportMeta } from '../lib/reports';
+import { extractTitle, formatGeneratedAt, loadReports, summaryCaption, type ReportMeta } from '../lib/reports';
 import { renderReport } from '../lib/render';
-import { buildWeekSummaries, nextReportNote } from '../lib/schedule';
+import { buildWeekSummaries, latestReport, nextReportNote } from '../lib/schedule';
 
 const env = getEnv();
 const bypass = Astro.url.searchParams.get('nocache') === '1';

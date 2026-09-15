@@ -4,8 +4,8 @@ import ReportIndex from '../../components/ReportIndex.astro';
 import EmptyState from '../../components/EmptyState.astro';
 import { getEnv } from '../../lib/env';
 import { S3Error } from '../../lib/s3';
-import { latestReport, loadReports, summaryCaption, type ReportMeta } from '../../lib/reports';
-import { buildWeekSummaries } from '../../lib/schedule';
+import { loadReports, summaryCaption, type ReportMeta } from '../../lib/reports';
+import { buildWeekSummaries, latestReport } from '../../lib/schedule';
 import { PAGE_CACHE_CONTROL } from '../../lib/cache';
 
 const env = getEnv();
