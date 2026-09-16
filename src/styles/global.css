@@ -336,3 +336,20 @@ button {
   text-transform: uppercase;
   color: var(--grey-500);
 }
+
+/* The AI summary's prose is injected with `set:html`, so these cannot live
+   in the component's scoped <style> — the same constraint documented in
+   ReportArticle.astro. The card's own chrome does stay scoped there. */
+.dttw-ai .md p:last-child {
+  margin-bottom: 0;
+}
+.dttw-ai .md code {
+  background: var(--surface-muted);
+}
+
+/* The Markdown view is a byte-faithful look at the report object in the
+   bucket; a generated summary is not part of it. The toggle sets this
+   attribute on the root element because the card sits outside #dttw-view. */
+[data-dttw-view='raw'] .dttw-ai {
+  display: none;
+}

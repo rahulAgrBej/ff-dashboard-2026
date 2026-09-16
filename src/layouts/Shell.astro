@@ -47,6 +47,9 @@ const { title, activeTab, showTopbarActions = false, hasAside = false } = Astro.
 
         function apply(mode) {
           if (view) view.setAttribute('data-view', mode);
+          // Mirrored onto the root so blocks outside #dttw-view — the AI
+          // summary card — can answer the toggle in CSS alone.
+          document.documentElement.setAttribute('data-dttw-view', mode);
           document.querySelectorAll('[data-view-btn]').forEach(function (btn) {
             btn.setAttribute('data-on', btn.getAttribute('data-view-btn') === mode ? 'true' : 'false');
           });

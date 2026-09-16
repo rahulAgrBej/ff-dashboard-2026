@@ -74,16 +74,25 @@ function decodeXmlEntities(s: string): string {
     .replace(/&apos;/g, "'");
 }
 
-/** fixtures/reports/** stands in for the bucket when USE_FIXTURES is set, so the index can be exercised without any AWS call. */
+/** fixtures/reports/** and fixtures/summaries/** stand in for the bucket when USE_FIXTURES is set, so the index and the summary cards can be exercised without any AWS call. */
 // Bundled at build time via Vite's glob import — workerd (including the
 // wrangler platform proxy `astro dev` runs on) has no access to the real
 // filesystem, so fixtures can't be read with node:fs at request time even
 // in local dev. Eager + ?raw inlines the file contents as plain strings.
-const fixtureFiles = import.meta.glob('/fixtures/reports/**/*.md', {
-  eager: true,
-  query: '?raw',
-  import: 'default',
-}) as Record<string, string>;
+// Summaries are globbed as ?raw too, not as JSON modules: getObject's
+// contract is "the object's bytes as text", and the caller parses.
+const fixtureFiles = {
+  ...(import.meta.glob('/fixtures/reports/**/*.md', {
+    eager: true,
+    query: '?raw',
+    import: 'default',
+  }) as Record<string, string>),
+  ...(import.meta.glob('/fixtures/summaries/**/*.json', {
+    eager: true,
+    query: '?raw',
+    import: 'default',
+  }) as Record<string, string>),
+};
 
 function fixtureContentHash(content: string): string {
   let hash = 0;

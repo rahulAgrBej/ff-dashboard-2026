@@ -7,10 +7,20 @@ Read surface for the reports produced by [`espn-fantasy-football-sandbox`](https
 ```
 browser → Cloudflare Worker (Astro SSR)
             ├─ Cache API  (listing 300s / bodies immutable-by-etag)
-            └─ aws4fetch SigV4 → s3://espn-ff-data-2026/reports/**
+            └─ aws4fetch SigV4 → s3://espn-ff-data-2026/{reports,summaries}/**
 ```
 
 The upstream repo is never modified. The Worker reads `reports/<season>/week-<NN>/<date>-<day>-<slug>.md` out of the bucket on every request, listing once per 300s and caching each rendered report body forever under a key that includes its S3 ETag — so a same-day re-run of a report (which upstream explicitly tolerates) is served correctly with no purge logic anywhere.
+
+### AI summaries
+
+Upstream also writes one Gemini-generated JSON envelope per report under `summaries/`, at the report's own key with `reports/` → `summaries/` and `.md` → `.json`. `src/lib/summaries.ts` derives that key by string swap — there is no lookup table — lists the prefix on the same 300s cycle, and renders `summary_markdown` in a card between the freshness row and the report body.
+
+Three properties of that upstream design shape this side:
+
+- **Absence is normal.** Summaries are produced by a separate workflow that trails each report by up to ~20 minutes and writes nothing when a generation fails. A report with no summary renders alone, with no placeholder — `loadSummary` returns `null` and never throws, so a missing, malformed, or future-schema envelope costs the page nothing.
+- **Staleness is checked against the artifact, not the clock.** The envelope stores `report.sha256` over the report's full markdown. The Worker hashes the body it is about to render and marks the card stale on mismatch, so a summary describing an earlier render of the same key is labelled rather than silently trusted.
+- **The summary is never part of the report.** It is not spliced into `markdown`, so `#dttw-raw` and Copy markdown stay byte-identical to the S3 object. The card is hidden in Markdown view and in print.
 
 `src/lib/schedule.ts` encodes the eight-report weekly schedule from `docs/report-weekly-schedule.md` so every week always renders all eight slots — published, pending (scheduled, still missing), or planned (not built upstream yet) — even though only Monday's report is implemented today. Widen `IMPLEMENTED_DAYS` there as upstream ships the rest.
 
@@ -29,7 +39,7 @@ Two ways to run it:
 npm run dev
 ```
 
-This serves `fixtures/reports/**` — a synthetic 3-group tree exercising a Tuesday double-report, a deliberate gap (to see the `pending` state), and a cross-season sort — instead of calling S3. It's the only way to exercise the index/sidebar/week-grouping logic today, since the real bucket holds exactly one report.
+This serves `fixtures/reports/**` and `fixtures/summaries/**` — a synthetic 3-group tree exercising a Tuesday double-report, a deliberate gap (to see the `pending` state), and a cross-season sort — instead of calling S3. The summary fixtures cover all three states: one envelope whose `report.sha256` matches the report beside it (fresh card), one with a deliberately wrong digest (stale marker), and three reports with no summary at all (no card). It's the only way to exercise the index/sidebar/week-grouping logic today, since the real bucket holds exactly one report.
 
 Note: `USE_FIXTURES` must be set in `.dev.vars`, not as a shell env var prefix (`USE_FIXTURES=1 npm run dev` does *not* work) — the dev server runs on workerd via the wrangler platform proxy, which only sees vars wrangler loads from `.dev.vars`, not the host shell's environment.
 
@@ -41,8 +51,10 @@ Either way: `?nocache=1` on any URL bypasses the Cache API read for that request
 
 1. Confirm the bucket's region: `aws s3api get-bucket-location --bucket espn-ff-data-2026`.
 2. Create an IAM user, e.g. `ff-dashboard-reader`, with an inline policy granting only:
-   - `s3:GetObject` on `arn:aws:s3:::espn-ff-data-2026/reports/*`
-   - `s3:ListBucket` on `arn:aws:s3:::espn-ff-data-2026`, scoped with `Condition: { StringLike: { "s3:prefix": "reports/*" } }`
+   - `s3:GetObject` on `arn:aws:s3:::espn-ff-data-2026/reports/*` **and** `arn:aws:s3:::espn-ff-data-2026/summaries/*`
+   - `s3:ListBucket` on `arn:aws:s3:::espn-ff-data-2026`, scoped with `Condition: { StringLike: { "s3:prefix": ["reports/*", "summaries/*"] } }`
+
+   `summaries/*` is required for the AI summary cards. A key that predates them can still read reports: the summary listing fails, `loadSummary` swallows it, and every report renders without a card — so a too-narrow policy degrades quietly rather than erroring, and is worth checking explicitly if no card ever appears.
 
    This is read-only and prefix-scoped — it has no reach into the bucket's `state/`, `archive/`, or `logs/` prefixes. The bucket stays private; nothing here changes its Block Public Access settings.
 3. Generate an access key for that user and put it in `.dev.vars` for local dev, and in Cloudflare (see Deploy) for production. **The key never goes in `wrangler.jsonc`, `.dev.vars.example`, or any commit** — `.dev.vars` is gitignored.
@@ -79,6 +91,7 @@ npx wrangler deploy
 - **Real S3**: confirm `/` renders the live Monday report, `Freshness` is lifted into its own row, `insufficient data` renders in the alert color, and the closing "What this report cannot see" callout is set off from the body.
 - **Caching**: `npx wrangler tail` while reloading — one `ListObjectsV2` per 300s, no repeat `GetObject` for an unchanged report; `?nocache=1` forces both.
 - **Interactions**: toggle Rendered/Markdown (the raw view must match the source byte-for-byte), Copy markdown, Print, and that the view choice survives a reload.
+- **AI summaries**: the card sits between the freshness row and the body; the waiver summary is on the waiver report and the week-in-review summary on its own (never swapped); the wrong-digest fixture shows the stale marker; a report with no envelope shows no card; and the card disappears in Markdown view and in print. Corrupting a summary fixture must leave the report rendering at HTTP 200 with no card.
 - **Failure path**: an invalid/missing AWS secret renders a clean empty state, never a 500.
 - **Responsive**: check both the desktop (topbar, two-column layout) and mobile (compact header, bottom tabs, no view toggle) layouts.
 
@@ -86,16 +99,16 @@ npx wrangler deploy
 
 ```
 src/
-├── lib/           s3.ts, reports.ts, schedule.ts, cache.ts, render.ts, env.ts
+├── lib/           s3.ts, reports.ts, summaries.ts, schedule.ts, cache.ts, render.ts, env.ts
 ├── layouts/       Shell.astro
-├── components/    Topbar, ReportHeader, FreshnessRow, ReportArticle, ReportIndex,
-│                  NextReportNote, MobileTabs, EmptyState, ui/*
+├── components/    Topbar, ReportHeader, FreshnessRow, AiSummary, ReportArticle,
+│                  ReportIndex, NextReportNote, MobileTabs, EmptyState, ui/*
 ├── styles/        tokens.css, global.css, print.css
 └── pages/         index.astro, reports/index.astro, reports/[season]/[week]/[slug].astro
 ```
 
-`src/lib/s3.ts` and `src/lib/reports.ts` are the only files that know what a bucket, key, or signature is — pages and components work entirely in terms of `ReportMeta` and rendered HTML.
+`src/lib/s3.ts`, `src/lib/reports.ts`, and `src/lib/summaries.ts` are the only files that know what a bucket, key, or signature is — pages and components work entirely in terms of `ReportMeta` and rendered HTML.
 
 ## Out of scope
 
-JSON ingestion, charts, R2, auth, dark mode, search, RSS, multi-league support, a settings page.
+Charts, R2, auth, dark mode, search, RSS, multi-league support, a settings page. (JSON ingestion is now in scope only for the `summaries/` envelopes described above — no other JSON is read.)

@@ -22,3 +22,10 @@
     display: block !important;
   }
 }
+
+@media print {
+  /* Same reasoning as the Markdown view: what prints is the report. */
+  .dttw-ai {
+    display: none !important;
+  }
+}

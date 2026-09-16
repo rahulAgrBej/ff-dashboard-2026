@@ -3,6 +3,7 @@ import Shell from '../../../../layouts/Shell.astro';
 import ReportHeader from '../../../../components/ReportHeader.astro';
 import FreshnessRow from '../../../../components/FreshnessRow.astro';
 import ReportArticle from '../../../../components/ReportArticle.astro';
+import AiSummary from '../../../../components/AiSummary.astro';
 import NextReportNote from '../../../../components/NextReportNote.astro';
 import ReportIndex from '../../../../components/ReportIndex.astro';
 import EmptyState from '../../../../components/EmptyState.astro';
@@ -13,7 +14,8 @@ import { getEnv } from '../../../../lib/env';
 import { getObject, S3Error } from '../../../../lib/s3';
 import { getCachedBody, PAGE_CACHE_CONTROL } from '../../../../lib/cache';
 import { attachDatelines, extractTitle, findReport, formatGeneratedAt, loadReports, summaryCaption, type ReportMeta } from '../../../../lib/reports';
-import { renderReport } from '../../../../lib/render';
+import { renderReport, renderSummary } from '../../../../lib/render';
+import { formatSummaryTimestamp, loadSummary } from '../../../../lib/summaries';
 import { buildWeekSummaries, collectWeekWindows, latestReport, nextReportNote, weekDateRange } from '../../../../lib/schedule';
 
 const env = getEnv();
@@ -50,6 +52,10 @@ if (!emptyReason && current) {
   }
 }
 
+// Additive and best-effort: `loadSummary` never throws, and a report with
+// no summary yet (normal for ~20 minutes after it publishes) renders alone.
+const summary = !emptyReason && current ? await loadSummary(env, current, markdown, bypass) : null;
+
 const now = new Date();
 const weekSummaries = !emptyReason ? buildWeekSummaries(reports, now) : [];
 const currentWeek = current ? weekSummaries.find((w) => w.season === current.season && w.week === current.week) : undefined;
@@ -80,6 +86,14 @@ const covers = rendered?.dateline?.covers ?? null;
         typeKey={typeKey}
       />
       <FreshnessRow entries={rendered!.freshness} />
+      {summary && (
+        <AiSummary
+          html={renderSummary(summary.summary_markdown)}
+          model={summary.model}
+          generatedAt={formatSummaryTimestamp(summary.generated_at)}
+          stale={summary.stale}
+        />
+      )}
       <ReportArticle bodyHtml={rendered!.bodyHtml} rawMarkdown={markdown} cannotSeeHtml={rendered!.cannotSeeHtml} />
       <NextReportNote nextSlot={upcoming} />
     </>

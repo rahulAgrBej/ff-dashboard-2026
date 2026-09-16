@@ -128,3 +128,18 @@ export function renderReport(markdown: string): RenderedReport {
 
   return { bodyHtml, freshness, cannotSeeHtml, dateline };
 }
+
+/**
+ * An AI summary envelope's `summary_markdown`, rendered with the same
+ * `marked` configuration as the reports — so the token-level HTML escaping
+ * above covers model output too, which is the one input here nobody in
+ * this repo wrote.
+ *
+ * The upstream output contract (`espn_ff/ai/prompt.py`) asks for prose with
+ * no heading and no table, but nothing enforces it, so this deliberately
+ * runs the full parser rather than a prose-only subset: a summary that
+ * breaks its contract should render imperfectly, never as raw markup.
+ */
+export function renderSummary(markdown: string): string {
+  return marked.parse(markdown.trim(), { async: false }) as string;
+}

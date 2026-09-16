@@ -6,6 +6,9 @@ const BODY_TTL_S = 60 * 60 * 24 * 365; // 1 year — safe because the cache key 
 
 const LISTING_CACHE_KEY = 'https://internal/listing/reports';
 
+/** The `summaries/` listing gets its own entry — same 300s TTL, separate key, so neither prefix can serve the other's objects. */
+export const SUMMARY_LISTING_CACHE_KEY = 'https://internal/listing/summaries';
+
 /** The response header this dashboard sends on every page: fresh at the edge for 60s, servable stale for another 300s while a background revalidation runs. */
 export const PAGE_CACHE_CONTROL = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
 
@@ -21,13 +24,17 @@ function defaultCache(): Cache | undefined {
  * One `ListObjectsV2` per 300s, cached via the Cache API. `bypass` (the
  * `?nocache=1` escape hatch) skips the read but still repopulates the
  * cache with the fresh result — bypass-and-repopulate, never a purge.
+ *
+ * `key` selects the cache entry, so one prefix's listing can never be
+ * served for another's. It defaults to the reports listing.
  */
 export async function getCachedListing(
   bypass: boolean,
-  loader: () => Promise<S3Object[]>
+  loader: () => Promise<S3Object[]>,
+  key: string = LISTING_CACHE_KEY
 ): Promise<S3Object[]> {
   const cache = defaultCache();
-  const cacheKey = new Request(LISTING_CACHE_KEY);
+  const cacheKey = new Request(key);
 
   if (cache && !bypass) {
     const cached = await cache.match(cacheKey);
