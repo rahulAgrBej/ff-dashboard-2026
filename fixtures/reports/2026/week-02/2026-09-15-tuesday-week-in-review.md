@@ -1,5 +1,9 @@
 # Week in review -- 2026 week 1
 
+**Covers** week 1's results
+**Week 1** Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET
+**Rendered** Tue 2026-09-15 20:12 ET
+
 ## Freshness
 - sleeper: 2026-09-08 08:11:02
 - nflverse: 2026-09-08 09:23:44

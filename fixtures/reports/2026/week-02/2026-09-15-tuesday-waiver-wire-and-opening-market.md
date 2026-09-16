@@ -1,8 +1,12 @@
-# Waiver wire and opening market -- 2026 week 1
+# Waiver wire and opening market -- 2026 week 2
+
+**Covers** week 2's waiver window; settlements also span week 1 (Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET)
+**Week 2** Tue 2026-09-15 03:00 - Tue 2026-09-22 03:00 ET
+**Rendered** Tue 2026-09-15 20:38 ET
 
 ## Freshness
-- sleeper: 2026-09-08 08:11:02
-- espn: 2026-09-08 09:08:19
+- sleeper: 2026-09-15 08:11:02
+- espn: 2026-09-15 09:08:19
 - odds: **insufficient data** -- the `slate` job has not produced a snapshot this week
 
 ## Waiver settlements

@@ -1,5 +1,9 @@
 # Monday night call -- 2026 week 2
 
+**Covers** Mon 2026-09-21 -- week 2's Monday-night game
+**Week 2** Tue 2026-09-15 03:00 - Tue 2026-09-22 03:00 ET
+**Rendered** Mon 2026-09-14 20:45 ET
+
 ## Freshness
 - sleeper: 2026-09-14 04:14:28
 - nflverse: 2026-09-14 17:24:07

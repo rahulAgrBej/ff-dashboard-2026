@@ -1,5 +1,6 @@
-import { listObjects, type S3Env, type S3Object } from './s3';
-import { getCachedListing } from './cache';
+import { listObjects, getObject, type S3Env, type S3Object } from './s3';
+import { getCachedListing, getCachedBody, getCachedDateline } from './cache';
+import { parseDateline, type Dateline } from './dateline';
 
 export interface ReportMeta {
   key: string;
@@ -10,6 +11,7 @@ export interface ReportMeta {
   slug: string; // opaque URL segment; never used to derive a title
   etag: string;
   lastModified: string;
+  dateline?: Dateline | null; // parsed **Covers**/**Week N**/**Rendered** block; undefined until attachDatelines runs, null when absent or unfetched
 }
 
 const KEY_RE = /^reports\/(\d{4})\/week-(\d{2})\/(\d{4}-\d{2}-\d{2})-([a-z]+)-(.+)\.md$/;
@@ -55,6 +57,52 @@ export function reportUrl(meta: ReportMeta): string {
 export async function loadReports(env: S3Env, bypassCache: boolean): Promise<ReportMeta[]> {
   const objects = await getCachedListing(bypassCache, () => listObjects(env, 'reports/'));
   return parseReportKeys(objects);
+}
+
+// Cloudflare's per-request subrequest limit, not a design choice — reports
+// beyond this many misses just fall back to the filename date and are
+// picked up automatically once their body cache warms on a later request.
+const MAX_DATELINE_FETCHES = 12;
+
+/**
+ * Attaches a parsed dateline to every report. On a cache miss this reuses
+ * `getCachedBody` — the same cache entry the page body fetch already
+ * populates for the latest report — so warm steady-state costs zero extra
+ * GETs. Never throws: a failed GET just leaves `dateline: null`.
+ */
+export async function attachDatelines(
+  env: S3Env,
+  reports: ReportMeta[],
+  bypassCache: boolean
+): Promise<ReportMeta[]> {
+  const ordered = [...reports].sort((a, b) => {
+    if (a.season !== b.season) return b.season - a.season;
+    if (a.week !== b.week) return b.week - a.week;
+    return b.lastModified.localeCompare(a.lastModified);
+  });
+
+  let fetchBudget = MAX_DATELINE_FETCHES;
+
+  const withDatelines = await Promise.all(
+    ordered.map(async (report) => {
+      const dateline = await getCachedDateline(report.key, report.etag, bypassCache, async () => {
+        if (fetchBudget <= 0) return undefined; // capped out — retry on a later request, don't cache
+        fetchBudget--;
+        try {
+          const markdown = await getCachedBody(report.key, report.etag, bypassCache, () =>
+            getObject(env, report.key)
+          );
+          return parseDateline(markdown);
+        } catch {
+          return null;
+        }
+      });
+      return { ...report, dateline };
+    })
+  );
+
+  const byKey = new Map(withDatelines.map((r) => [r.key, r]));
+  return reports.map((r) => byKey.get(r.key) ?? r);
 }
 
 export function summaryCaption(reports: ReportMeta[]): string {

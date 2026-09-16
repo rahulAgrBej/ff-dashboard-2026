@@ -1,5 +1,9 @@
 # Availability watchlist -- 2026 week 1
 
+**Covers** week 1's Wednesday practice read
+**Week 1** Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET
+**Rendered** Wed 2026-09-09 13:11 ET
+
 ## Freshness
 - sleeper: 2026-09-09 08:11:44
 - nflverse: 2026-09-09 09:23:12

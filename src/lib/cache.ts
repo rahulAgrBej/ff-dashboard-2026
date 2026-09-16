@@ -1,4 +1,5 @@
 import type { S3Object } from './s3';
+import type { Dateline } from './dateline';
 
 const LISTING_TTL_S = 300;
 const BODY_TTL_S = 60 * 60 * 24 * 365; // 1 year — safe because the cache key embeds the ETag
@@ -82,4 +83,43 @@ export async function getCachedBody(
   }
 
   return html;
+}
+
+/**
+ * Parsed datelines cached under `dateline/<key>@<etag>` at the same
+ * 1-year/ETag-in-key scheme as `getCachedBody` — a same-day upstream re-run
+ * gets a new ETag, hence a new cache key, hence correct content, with no
+ * purge logic anywhere. `parse` may return `undefined` to signal "skipped,
+ * don't cache this" (e.g. a per-request fetch budget ran out) — the caller
+ * gets `null` back but the miss is retried on a later request instead of
+ * being cached as "no dateline" forever.
+ */
+export async function getCachedDateline(
+  key: string,
+  etag: string,
+  bypass: boolean,
+  parse: () => Promise<Dateline | null | undefined>
+): Promise<Dateline | null> {
+  const cache = defaultCache();
+  const cacheKey = new Request(`https://internal/dateline/${encodeURIComponent(key)}@${encodeURIComponent(etag)}`);
+
+  if (cache && !bypass) {
+    const cached = await cache.match(cacheKey);
+    if (cached) return (await cached.json()) as Dateline | null;
+  }
+
+  const dateline = await parse();
+  if (dateline === undefined) return null;
+
+  if (cache) {
+    const res = new Response(JSON.stringify(dateline), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': `max-age=${BODY_TTL_S}, immutable`,
+      },
+    });
+    await cache.put(cacheKey, res);
+  }
+
+  return dateline;
 }

@@ -1,4 +1,5 @@
 import type { ReportMeta } from './reports';
+import { slotDateFor, dayOffsetInTueWeek } from './dateline';
 
 export type SlotState = 'published' | 'pending' | 'planned';
 
@@ -24,14 +25,14 @@ export const SCHEDULE: ScheduleSlot[] = [
 ];
 
 /** Widen as upstream ships days. Without this, every week would read "1 of 8, seven failures" for reports that were never built. */
-export const IMPLEMENTED_DAYS: string[] = ['monday'];
+export const IMPLEMENTED_DAYS: string[] = ['monday', 'tuesday'];
 
-/** Read STALE_AFTER_HOURS below before tightening — only Monday is implemented, so reports land weekly. */
+/** Read STALE_AFTER_HOURS below before tightening — only Monday and Tuesday are implemented, so reports land twice a week. */
 export const STALE_AFTER_HOURS = 192;
 
-/** One anchor Monday per season; week N spans anchor + (N-1)*7 for 7 days. */
-export const WEEK_1_MONDAY: Record<number, string> = {
-  2026: '2026-09-07',
+/** One anchor Tuesday per season, matching the pipeline's Tue 03:00 ET -> Tue 03:00 ET window (`espn_ff/weeks.py`); week N spans anchor + (N-1)*7 for 7 days. Last-resort fallback only — a real window parsed from any report's dateline (see `weekDateRange`) always wins. */
+export const WEEK_1_START: Record<number, string> = {
+  2026: '2026-09-08',
 };
 
 function parseIsoDate(iso: string): Date {
@@ -43,6 +44,10 @@ function addDaysUtc(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 86400000);
 }
 
+function isoFromDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 function formatDayMonth(date: Date): { day: number; month: string } {
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -52,24 +57,73 @@ function formatDayMonth(date: Date): { day: number; month: string } {
 }
 
 export interface WeekRange {
-  start: Date;
-  end: Date;
-  label: string; // e.g. "14–20 Sep" or "31 Aug–6 Sep"
+  start: Date; // the week's opening Tuesday
+  end: Date; // inclusive — the Monday the following Tuesday 03:00 window closes out
+  label: string; // e.g. "15–21 Sep" or "31 Aug–6 Sep"
 }
 
-/** Week N's Monday-through-Sunday range, derived from the season anchor — never by snapping report dates to Mondays (quirk #2: `day` is a report type, not a weekday). */
-export function weekDateRange(season: number, week: number): WeekRange | null {
-  const anchor = WEEK_1_MONDAY[season];
-  if (!anchor) return null;
-  const monday = addDaysUtc(parseIsoDate(anchor), (week - 1) * 7);
-  const sunday = addDaysUtc(monday, 6);
-  const start = formatDayMonth(monday);
-  const end = formatDayMonth(sunday);
+export interface WeekWindow {
+  start: string; // YYYY-MM-DD, exclusive-end Tue->Tue window as named by a report's own **Week N** line
+  end: string;
+}
+
+/** Every report's dateline names its own week's Tue->Tue window. Collected once per (season, week) so `weekDateRange` can source real windows instead of guessing from an anchor — first report wins, but reports naming the same week always agree since they come from the same pipeline run. */
+export function collectWeekWindows(reports: ReportMeta[]): Map<string, WeekWindow> {
+  const windows = new Map<string, WeekWindow>();
+  for (const r of reports) {
+    const dl = r.dateline;
+    if (!dl || dl.week === null || !dl.weekStart || !dl.weekEnd) continue;
+    const key = `${r.season}-${dl.week}`;
+    if (!windows.has(key)) windows.set(key, { start: dl.weekStart, end: dl.weekEnd });
+  }
+  return windows;
+}
+
+function rangeFromWindow(window: WeekWindow): WeekRange {
+  const start = parseIsoDate(window.start);
+  const inclusiveEnd = addDaysUtc(parseIsoDate(window.end), -1);
+  const s = formatDayMonth(start);
+  const e = formatDayMonth(inclusiveEnd);
   const label =
-    start.month === end.month
-      ? `${start.day}–${end.day} ${end.month}`
-      : `${start.day} ${start.month}–${end.day} ${end.month}`;
-  return { start: monday, end: sunday, label };
+    s.month === e.month
+      ? `${s.day}–${e.day} ${e.month}`
+      : `${s.day} ${s.month}–${e.day} ${e.month}`;
+  return { start, end: inclusiveEnd, label };
+}
+
+/**
+ * Week N's Tue-through-Mon range (the pipeline's own Tue 03:00 ET -> Tue
+ * 03:00 ET window, rendered inclusive of the last covered day). Never by
+ * snapping report dates to weekdays (quirk #2: `day` is a report type, not
+ * a calendar weekday) — instead, in order:
+ *  1. a window named directly by a report's own dateline for this week;
+ *  2. extrapolated ±7n days from any other known window in that season;
+ *  3. the season's `WEEK_1_START` anchor;
+ *  4. `null` (a season/week with no data at all keeps its bare label).
+ */
+export function weekDateRange(season: number, week: number, windows?: Map<string, WeekWindow>): WeekRange | null {
+  const direct = windows?.get(`${season}-${week}`);
+  if (direct) return rangeFromWindow(direct);
+
+  if (windows) {
+    for (const [key, window] of windows) {
+      const sep = key.lastIndexOf('-');
+      const windowSeason = Number(key.slice(0, sep));
+      const windowWeek = Number(key.slice(sep + 1));
+      if (windowSeason !== season) continue;
+      const deltaDays = (week - windowWeek) * 7;
+      return rangeFromWindow({
+        start: isoFromDate(addDaysUtc(parseIsoDate(window.start), deltaDays)),
+        end: isoFromDate(addDaysUtc(parseIsoDate(window.end), deltaDays)),
+      });
+    }
+  }
+
+  const anchor = WEEK_1_START[season];
+  if (!anchor) return null;
+  const start = addDaysUtc(parseIsoDate(anchor), (week - 1) * 7);
+  const end = addDaysUtc(start, 7);
+  return rangeFromWindow({ start: isoFromDate(start), end: isoFromDate(end) });
 }
 
 export interface MergedSlot {
@@ -81,6 +135,7 @@ export interface MergedSlot {
   short?: string;
   state: SlotState;
   report?: ReportMeta;
+  slotDate: string | null; // YYYY-MM-DD this slot represents — from the report's dateline when published, else the week window's slot day
 }
 
 /** The one slot a report belongs to: by day token, disambiguated by slug when a day holds more than one slot (Tuesday). Report-driven (one report → its slot) rather than slot-driven, so a single report can never end up claimed by two slots. */
@@ -95,10 +150,11 @@ export function mergeSlots(
   reports: ReportMeta[],
   season: number,
   week: number,
-  now: Date
+  now: Date,
+  windows?: Map<string, WeekWindow>
 ): MergedSlot[] {
   const weekReports = reports.filter((r) => r.season === season && r.week === week);
-  const range = weekDateRange(season, week);
+  const range = weekDateRange(season, week, windows);
 
   const bySlotKey = new Map<string, ReportMeta>();
   const extras: ReportMeta[] = [];
@@ -131,6 +187,12 @@ export function mergeSlots(
       state = slotDateTime && slotDateTime <= now ? 'pending' : 'planned';
     }
 
+    const slotDate = match
+      ? (slotDateFor(match, slot.day) ?? match.date)
+      : range
+        ? isoFromDate(addDaysUtc(range.start, dayOffsetInTueWeek(slot.day)))
+        : null;
+
     return {
       order: slot.order,
       day: slot.day,
@@ -140,6 +202,7 @@ export function mergeSlots(
       short: slot.short,
       state,
       report: match,
+      slotDate,
     };
   });
 
@@ -155,6 +218,7 @@ export function mergeSlots(
       title: dayLabel(r.day),
       state: 'published',
       report: r,
+      slotDate: slotDateFor(r, r.day) ?? r.date,
     });
   }
 
@@ -162,11 +226,8 @@ export function mergeSlots(
 }
 
 /** ET wall-clock time treated as UTC-5 year-round — the schedule doc notes these are EventBridge crons pinned to America/New_York, and this dashboard only ever compares against "has this slot's time passed today", not an exact deadline. */
-function slotDateTimeEt(weekMonday: Date, slot: ScheduleSlot): Date {
-  const dayOffset = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].indexOf(
-    slot.day
-  );
-  const date = addDaysUtc(weekMonday, dayOffset < 0 ? 0 : dayOffset);
+function slotDateTimeEt(weekStart: Date, slot: ScheduleSlot): Date {
+  const date = addDaysUtc(weekStart, dayOffsetInTueWeek(slot.day));
   const [h, m] = slot.timeEt.split(':').map(Number);
   return new Date(date.getTime() + (h + 5) * 3600000 + m * 60000);
 }
@@ -186,6 +247,7 @@ export interface WeekSummary {
 
 /** One group per distinct (season, week) that appears in the reports list, newest first. */
 export function buildWeekSummaries(reports: ReportMeta[], now: Date): WeekSummary[] {
+  const windows = collectWeekWindows(reports);
   const seen = new Map<string, { season: number; week: number }>();
   for (const r of reports) {
     seen.set(`${r.season}-${r.week}`, { season: r.season, week: r.week });
@@ -193,12 +255,12 @@ export function buildWeekSummaries(reports: ReportMeta[], now: Date): WeekSummar
   const weeks = Array.from(seen.values()).sort((a, b) => b.season - a.season || b.week - a.week);
 
   return weeks.map(({ season, week }) => {
-    const range = weekDateRange(season, week);
+    const range = weekDateRange(season, week, windows);
     return {
       season,
       week,
       label: range ? `Week ${week} · ${range.label}` : `Week ${week}`,
-      slots: mergeSlots(reports, season, week, now),
+      slots: mergeSlots(reports, season, week, now, windows),
     };
   });
 }

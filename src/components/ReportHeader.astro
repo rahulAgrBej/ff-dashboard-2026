@@ -4,11 +4,14 @@ import Badge from './ui/Badge.astro';
 export interface Props {
   eyebrow?: string; // "Most recent"
   weekLabel: string; // "Week 3"
+  weekWindowLabel?: string; // "15–21 Sep"
+  covers?: string | null; // raw prose after **Covers**
   title: string;
   generatedAt: string; // "12 Sep 2026, 00:12 ET"
   typeKey: string; // "monday_night_call"
 }
-const { eyebrow = 'Most recent', weekLabel, title, generatedAt, typeKey } = Astro.props as Props;
+const { eyebrow = 'Most recent', weekLabel, weekWindowLabel, covers, title, generatedAt, typeKey } =
+  Astro.props as Props;
 ---
 
 <div class="dttw-header dttw-header--desktop">
@@ -16,8 +19,10 @@ const { eyebrow = 'Most recent', weekLabel, title, generatedAt, typeKey } = Astr
     <div class="dttw-header__row">
       <span class="flabel">{eyebrow}</span>
       <Badge tone="neutral">{weekLabel}</Badge>
+      {weekWindowLabel && <span class="dttw-header__window">{weekWindowLabel}</span>}
     </div>
     <h1 class="dttw-header__title">{title}</h1>
+    {covers && <p class="dttw-header__covers">Covers {covers}</p>}
     <p class="dttw-header__meta">Generated {generatedAt} · <code>{typeKey}</code></p>
   </div>
 </div>
@@ -26,6 +31,7 @@ const { eyebrow = 'Most recent', weekLabel, title, generatedAt, typeKey } = Astr
   <div class="dttw-header__mobile-text">
     <div class="flabel">{eyebrow} · {weekLabel}</div>
     <div class="dttw-header__title-sm">{title}</div>
+    {covers && <p class="dttw-header__covers">Covers {covers}</p>}
   </div>
   <a href="/reports" class="dttw-header__all">All ▾</a>
 </div>
@@ -51,6 +57,15 @@ const { eyebrow = 'Most recent', weekLabel, title, generatedAt, typeKey } = Astr
     font: var(--type-title-1);
     letter-spacing: var(--ls-title-1);
     color: var(--text-primary);
+  }
+  .dttw-header__window {
+    font: var(--type-data);
+    color: var(--text-muted);
+  }
+  .dttw-header__covers {
+    margin: var(--space-2) 0 0;
+    font: var(--type-data);
+    color: var(--text-muted);
   }
   .dttw-header__meta {
     margin: var(--space-3) 0 0;

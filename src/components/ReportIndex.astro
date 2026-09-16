@@ -22,10 +22,9 @@ function rowLabel(slot: MergedSlot): string {
   return dayLabel(slot.day);
 }
 
-function formatShortDate(iso: string): string {
-  const [, m, d] = iso.split('-').map(Number);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${d} ${months[m - 1]}`;
+function formatMmDd(iso: string): string {
+  const [, m, d] = iso.split('-');
+  return `${m}/${d}`;
 }
 ---
 
@@ -43,9 +42,10 @@ function formatShortDate(iso: string): string {
               class="ixrow"
               href={reportUrl(slot.report)}
               data-on={slot.report.key === currentKey ? 'true' : undefined}
+              title={`Covers ${formatMmDd(slot.slotDate ?? slot.report.date)} · generated ${slot.report.date}`}
             >
               {rowLabel(slot)}
-              <span class="ixdate">{formatShortDate(slot.report.date)}</span>
+              <span class="ixdate">{formatMmDd(slot.slotDate ?? slot.report.date)}</span>
             </a>
           ) : slot.state === 'pending' ? (
             <div class="ixrow" data-pending="true">

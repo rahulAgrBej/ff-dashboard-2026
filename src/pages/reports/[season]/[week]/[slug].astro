@@ -12,9 +12,9 @@ import Button from '../../../../components/ui/Button.astro';
 import { getEnv } from '../../../../lib/env';
 import { getObject, S3Error } from '../../../../lib/s3';
 import { getCachedBody, PAGE_CACHE_CONTROL } from '../../../../lib/cache';
-import { extractTitle, findReport, formatGeneratedAt, loadReports, summaryCaption, type ReportMeta } from '../../../../lib/reports';
+import { attachDatelines, extractTitle, findReport, formatGeneratedAt, loadReports, summaryCaption, type ReportMeta } from '../../../../lib/reports';
 import { renderReport } from '../../../../lib/render';
-import { buildWeekSummaries, latestReport, nextReportNote } from '../../../../lib/schedule';
+import { buildWeekSummaries, collectWeekWindows, latestReport, nextReportNote, weekDateRange } from '../../../../lib/schedule';
 
 const env = getEnv();
 const bypass = Astro.url.searchParams.get('nocache') === '1';
@@ -29,6 +29,7 @@ let reports: ReportMeta[];
 let emptyReason: string | null = null;
 try {
   reports = await loadReports(env, bypass);
+  reports = await attachDatelines(env, reports, bypass);
 } catch (err) {
   reports = [];
   emptyReason = err instanceof S3Error ? err.message : 'S3 is unreachable.';
@@ -58,8 +59,10 @@ const isLatest = current && latestReport(reports)?.key === current.key;
 
 const title = markdown ? extractTitle(markdown) : 'Report';
 const rendered = markdown ? renderReport(markdown) : null;
-const generatedAt = current ? formatGeneratedAt(current.lastModified) : '';
+const generatedAt = rendered?.dateline?.renderedAt ?? (current ? formatGeneratedAt(current.lastModified) : '');
 const typeKey = currentSlot?.key ?? current?.day ?? '';
+const weekWindowLabel = current ? weekDateRange(current.season, current.week, collectWeekWindows(reports))?.label : undefined;
+const covers = rendered?.dateline?.covers ?? null;
 ---
 
 <Shell title={`${title} · Down to the Wire`} activeTab="latest" showTopbarActions={!emptyReason} hasAside={!emptyReason}>
@@ -70,6 +73,8 @@ const typeKey = currentSlot?.key ?? current?.day ?? '';
       <ReportHeader
         eyebrow={isLatest ? 'Most recent' : 'Report'}
         weekLabel={`Week ${current!.week}`}
+        weekWindowLabel={weekWindowLabel}
+        covers={covers}
         title={title}
         generatedAt={generatedAt}
         typeKey={typeKey}

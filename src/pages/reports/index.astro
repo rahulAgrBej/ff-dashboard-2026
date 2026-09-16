@@ -4,7 +4,7 @@ import ReportIndex from '../../components/ReportIndex.astro';
 import EmptyState from '../../components/EmptyState.astro';
 import { getEnv } from '../../lib/env';
 import { S3Error } from '../../lib/s3';
-import { loadReports, summaryCaption, type ReportMeta } from '../../lib/reports';
+import { attachDatelines, loadReports, summaryCaption, type ReportMeta } from '../../lib/reports';
 import { buildWeekSummaries, latestReport } from '../../lib/schedule';
 import { PAGE_CACHE_CONTROL } from '../../lib/cache';
 
@@ -17,6 +17,7 @@ let reports: ReportMeta[];
 let emptyReason: string | null = null;
 try {
   reports = await loadReports(env, bypass);
+  reports = await attachDatelines(env, reports, bypass);
 } catch (err) {
   reports = [];
   emptyReason = err instanceof S3Error ? err.message : 'S3 is unreachable.';

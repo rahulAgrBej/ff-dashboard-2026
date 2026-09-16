@@ -1,4 +1,5 @@
 import { marked, Renderer, type Tokens } from 'marked';
+import { parseDateline, type Dateline } from './dateline';
 
 export interface FreshnessEntry {
   feed: string;
@@ -9,6 +10,7 @@ export interface RenderedReport {
   bodyHtml: string;
   freshness: FreshnessEntry[];
   cannotSeeHtml: string | null;
+  dateline: Dateline | null;
 }
 
 function escapeHtml(s: string): string {
@@ -77,6 +79,9 @@ marked.use({
 const FRESHNESS_RE = /^##\s+Freshness\s*\n([\s\S]*?)\n*(?=\n##\s|(?![\s\S]))/m;
 const CANNOT_SEE_RE = /^##\s+What this report cannot see\s*\n([\s\S]*?)\n*(?=\n##\s|(?![\s\S]))/m;
 const FRESHNESS_LINE_RE = /^-\s*([\w.]+):\s*(.+)$/gm;
+// Anchored to the very top of the body (right after the H1) — the pipeline
+// always emits Covers/Week N/Rendered in this order, all three or none.
+const DATELINE_BLOCK_RE = /^\n*\*\*Covers\*\*.*\n\*\*Week\s+\d+\*\*.*\n\*\*Rendered\*\*.*\n?/;
 
 function parseFreshnessEntries(section: string): FreshnessEntry[] {
   const entries: FreshnessEntry[] = [];
@@ -88,14 +93,22 @@ function parseFreshnessEntries(section: string): FreshnessEntry[] {
 }
 
 /**
- * Three markdown-aware touches, each guarded so a report day that omits
+ * Four markdown-aware touches, each guarded so a report day that omits
  * the section simply renders normally:
- *  1. Lift `## Freshness` out of the body into a compact row.
- *  2. Mark the `insufficient data` sentinel (via the extension above).
- *  3. Set off `## What this report cannot see` as a closing callout.
+ *  1. Lift the Covers/Week N/Rendered dateline out of the body.
+ *  2. Lift `## Freshness` out of the body into a compact row.
+ *  3. Mark the `insufficient data` sentinel (via the extension above).
+ *  4. Set off `## What this report cannot see` as a closing callout.
  */
 export function renderReport(markdown: string): RenderedReport {
   let body = markdown.replace(/^#\s+.+\n?/, '');
+
+  let dateline: Dateline | null = null;
+  const datelineMatch = DATELINE_BLOCK_RE.exec(body);
+  if (datelineMatch) {
+    dateline = parseDateline(datelineMatch[0]);
+    body = body.slice(0, datelineMatch.index) + body.slice(datelineMatch.index + datelineMatch[0].length);
+  }
 
   let freshness: FreshnessEntry[] = [];
   const freshnessMatch = FRESHNESS_RE.exec(body);
@@ -113,5 +126,5 @@ export function renderReport(markdown: string): RenderedReport {
 
   const bodyHtml = marked.parse(body.trim(), { async: false }) as string;
 
-  return { bodyHtml, freshness, cannotSeeHtml };
+  return { bodyHtml, freshness, cannotSeeHtml, dateline };
 }
