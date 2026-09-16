@@ -53,10 +53,46 @@ export function reportUrl(meta: ReportMeta): string {
   return `/reports/${meta.season}/${meta.week}/${meta.slug}`;
 }
 
+/**
+ * Orders two renders of what `reportUrl` treats as the same report, newest
+ * first. `date` — the report's own filename date — leads because upstream
+ * can re-run a report and write a new filename date onto an object that
+ * keeps the exact same S3 LastModified as its predecessor (a batch upload);
+ * a `lastModified`-only comparison sees a tie in that case and falls back to
+ * listing order. `lastModified` breaks ties `date` can't, and `key` is a
+ * deterministic last resort.
+ */
+export function compareRenderRecency(a: ReportMeta, b: ReportMeta): number {
+  if (a.date !== b.date) return b.date.localeCompare(a.date);
+  if (a.lastModified !== b.lastModified) return b.lastModified.localeCompare(a.lastModified);
+  return b.key.localeCompare(a.key);
+}
+
+/**
+ * Collapses re-rendered duplicates — objects that share `reportUrl`'s
+ * identity of `(season, week, slug)` — down to the newest render of each,
+ * preserving the incoming order of the survivors. A superseded render stops
+ * being reachable anywhere in the UI; that's the point, since it was never
+ * independently addressable (it shares its successor's URL) and, until
+ * deduped, was the version actually being served.
+ */
+export function dedupeRenders(reports: ReportMeta[]): ReportMeta[] {
+  const bestByUrl = new Map<string, ReportMeta>();
+  for (const r of reports) {
+    const url = `${r.season}/${r.week}/${r.slug}`;
+    const existing = bestByUrl.get(url);
+    if (!existing || compareRenderRecency(r, existing) < 0) {
+      bestByUrl.set(url, r);
+    }
+  }
+  const winners = new Set(bestByUrl.values());
+  return reports.filter((r) => winners.has(r));
+}
+
 /** The listing is the single source that drives the sidebar, latest selection, and every object's ETag/LastModified — fetched at most once per 300s via the Cache API. */
 export async function loadReports(env: S3Env, bypassCache: boolean): Promise<ReportMeta[]> {
   const objects = await getCachedListing(bypassCache, () => listObjects(env, 'reports/'));
-  return parseReportKeys(objects);
+  return dedupeRenders(parseReportKeys(objects));
 }
 
 // Cloudflare's per-request subrequest limit, not a design choice — reports
@@ -144,6 +180,7 @@ export function formatGeneratedAt(isoUtc: string): string {
   return `${day} ${month} ${year}, ${hh}:${mm} ET`;
 }
 
+/** `.find` is safe here only because `loadReports` already ran `dedupeRenders` — a `(season, week, slug)` triple is unique in any list built that way. A caller that assembles `reports` some other way must dedupe first, or this silently reverts to first-match-wins. */
 export function findReport(
   reports: ReportMeta[],
   season: number,

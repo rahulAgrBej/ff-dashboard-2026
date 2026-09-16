@@ -39,7 +39,9 @@ Two ways to run it:
 npm run dev
 ```
 
-This serves `fixtures/reports/**` and `fixtures/summaries/**` — a synthetic 3-group tree exercising a Tuesday double-report, a deliberate gap (to see the `pending` state), and a cross-season sort — instead of calling S3. The summary fixtures cover all three states: one envelope whose `report.sha256` matches the report beside it (fresh card), one with a deliberately wrong digest (stale marker), and three reports with no summary at all (no card). It's the only way to exercise the index/sidebar/week-grouping logic today, since the real bucket holds exactly one report.
+This serves `fixtures/reports/**` and `fixtures/summaries/**` — a synthetic 3-group tree exercising a Tuesday double-report, a re-rendered duplicate (same `(season, week, slug)`, newer `**Rendered**` timestamp, to exercise `dedupeRenders`), a deliberate gap (to see the `pending` state), and a cross-season sort — instead of calling S3. The summary fixtures cover all three states: one envelope whose `report.sha256` matches the report beside it (fresh card), one with a deliberately wrong digest (stale marker), and three reports with no summary at all (no card). It's the only way to exercise the index/sidebar/week-grouping logic today, since the real bucket holds a handful of reports.
+
+Note: the fixture slug `waiver-wire-and-opening-market` has drifted from the bucket's `waiver-wire` — that's intentional, not a bug to fix; the two are free to diverge since fixtures only need to be internally consistent with each other.
 
 Note: `USE_FIXTURES` must be set in `.dev.vars`, not as a shell env var prefix (`USE_FIXTURES=1 npm run dev` does *not* work) — the dev server runs on workerd via the wrangler platform proxy, which only sees vars wrangler loads from `.dev.vars`, not the host shell's environment.
 

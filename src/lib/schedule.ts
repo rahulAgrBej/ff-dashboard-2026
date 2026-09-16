@@ -1,4 +1,5 @@
 import type { ReportMeta } from './reports';
+import { compareRenderRecency } from './reports';
 import { slotDateFor, dayOffsetInTueWeek } from './dateline';
 
 export type SlotState = 'published' | 'pending' | 'planned';
@@ -167,7 +168,7 @@ export function mergeSlots(
     const existing = bySlotKey.get(slot.key);
     if (!existing) {
       bySlotKey.set(slot.key, r);
-    } else if (r.lastModified > existing.lastModified) {
+    } else if (compareRenderRecency(r, existing) < 0) {
       bySlotKey.set(slot.key, r);
       extras.push(existing); // displaced by a newer report claiming the same slot — still rendered, not dropped
     } else {
@@ -286,6 +287,6 @@ export function latestReport(reports: ReportMeta[]): ReportMeta | undefined {
     const orderA = matchSlot(a.day, a.slug)?.order ?? SCHEDULE.length + 1;
     const orderB = matchSlot(b.day, b.slug)?.order ?? SCHEDULE.length + 1;
     if (orderA !== orderB) return orderB - orderA;
-    return b.lastModified.localeCompare(a.lastModified);
+    return compareRenderRecency(a, b);
   })[0];
 }
