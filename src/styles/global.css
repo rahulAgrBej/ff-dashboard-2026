@@ -348,8 +348,10 @@ button {
 }
 
 /* The Markdown view is a byte-faithful look at the report object in the
-   bucket; a generated summary is not part of it. The toggle sets this
-   attribute on the root element because the card sits outside #dttw-view. */
-[data-dttw-view='raw'] .dttw-ai {
+   bucket; neither generated layer is part of it. The toggle sets this
+   attribute on the root element because the cards sit outside #dttw-view. */
+[data-dttw-view='raw'] .dttw-ai,
+[data-dttw-view='raw'] .dttw-news,
+[data-dttw-view='raw'] .dttw-news-error {
   display: none;
 }

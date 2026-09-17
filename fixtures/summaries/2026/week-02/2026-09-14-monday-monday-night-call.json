@@ -1,0 +1,173 @@
+{
+  "schema_version": 2,
+  "season": 2026,
+  "week": 2,
+  "day": "monday",
+  "report": {
+    "path": "reports/2026/week-02/2026-09-14-monday-monday-night-call.md",
+    "source": "s3",
+    "title": "Monday night call -- 2026 week 2",
+    "covers": "tonight's Monday night game",
+    "week_window": "Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET",
+    "rendered": "Mon 2026-09-14 10:32 ET",
+    "sha256": "d3bb0dacf4bfea4f05dbe0b258a494124f69aa35c93aa6191f87ef62df5b9b2e",
+    "_fixture_note": "sha256 is the real digest of the report beside it, so this fixture shows a FRESH summary card -- the stale marker must not fire here, or it would be indistinguishable from the ungrounded-news marker this fixture exists to exercise."
+  },
+  "summary_markdown": "One lineup slot is still live tonight, and the report treats it as a coin flip rather than a call. The projection gap is inside the margin where this model has no edge, so the report declines to break the tie and says so explicitly.\n\nWhat this report cannot see: it has no view of inactives, which post 90 minutes before kickoff and after this report was rendered.",
+  "model": "gemini-3.8-flash",
+  "generated_at": "2026-09-14T10:34:19-04:00",
+  "prior_reports": [],
+  "prompt_sha256": "9f3e1a7c5b2d8046e1c9a3f7b05d2e86c4a19b7f03e5d2a86c41f9b7e2d5a803",
+  "usage": {
+    "promptTokenCount": 22104,
+    "candidatesTokenCount": 198,
+    "thoughtsTokenCount": 1503,
+    "cachedContentTokenCount": 19880,
+    "totalTokenCount": 23805
+  },
+  "news": {
+    "model": "gemini-3.8-flash",
+    "grounded": false,
+    "generated_at": "2026-09-14T10:36:02-04:00",
+    "roster_week": 2,
+    "roster_export": "14-09-2026-weekly-rosters.csv",
+    "prompt_sha256": "7b1e4c7f902a5d8b36e1049fc7a2b5d80e3f6a9c14b7d2e50c41f9b7e2d5a803",
+    "search_query_count": 0,
+    "players": [
+      {
+        "player_id": 4431611,
+        "player_name": "Caleb Williams",
+        "position": "QB",
+        "pro_team": "CHI",
+        "lineup_slot": "QB",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": true,
+        "headline": "Expected to start.",
+        "detail": "No designation carried into the weekend.",
+        "as_of": null
+      },
+      {
+        "player_id": 4430807,
+        "player_name": "Bijan Robinson",
+        "position": "RB",
+        "pro_team": "ATL",
+        "lineup_slot": "RB",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 4426515,
+        "player_name": "Puka Nacua",
+        "position": "WR",
+        "pro_team": "LAR",
+        "lineup_slot": "WR",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 4429025,
+        "player_name": "Tre Tucker",
+        "position": "WR",
+        "pro_team": "LV",
+        "lineup_slot": "Bench",
+        "group": "bench",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 4569618,
+        "player_name": "Rome Odunze",
+        "position": "WR",
+        "pro_team": "CHI",
+        "lineup_slot": "Bench",
+        "group": "bench",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 4362871,
+        "player_name": "Marvin Harrison Jr.",
+        "position": "WR",
+        "pro_team": "ARI",
+        "lineup_slot": "IR",
+        "group": "ir",
+        "espn_injury_status": "INJURY_RESERVE",
+        "found": true,
+        "headline": "Remains on injured reserve.",
+        "detail": "No practice window has been opened.",
+        "as_of": null
+      }
+    ],
+    "groups": {
+      "starters": {
+        "players": 3,
+        "grounded": false,
+        "search_queries": [],
+        "sources": [],
+        "search_entry_point": "",
+        "usage": {
+          "promptTokenCount": 3640,
+          "candidatesTokenCount": 421,
+          "thoughtsTokenCount": 6875,
+          "cachedContentTokenCount": 0,
+          "totalTokenCount": 10936
+        }
+      },
+      "bench": {
+        "players": 2,
+        "grounded": false,
+        "search_queries": [],
+        "sources": [],
+        "search_entry_point": "",
+        "usage": {
+          "promptTokenCount": 3640,
+          "candidatesTokenCount": 421,
+          "thoughtsTokenCount": 6875,
+          "cachedContentTokenCount": 0,
+          "totalTokenCount": 10936
+        }
+      },
+      "ir": {
+        "players": 1,
+        "grounded": false,
+        "search_queries": [],
+        "sources": [],
+        "search_entry_point": "",
+        "usage": {
+          "promptTokenCount": 3640,
+          "candidatesTokenCount": 421,
+          "thoughtsTokenCount": 6875,
+          "cachedContentTokenCount": 0,
+          "totalTokenCount": 10936
+        }
+      }
+    },
+    "usage": {
+      "promptTokenCount": 10920,
+      "candidatesTokenCount": 1263,
+      "thoughtsTokenCount": 20625,
+      "cachedContentTokenCount": 0,
+      "totalTokenCount": 32808
+    }
+  },
+  "news_error": null
+}

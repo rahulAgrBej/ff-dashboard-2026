@@ -25,7 +25,9 @@
 
 @media print {
   /* Same reasoning as the Markdown view: what prints is the report. */
-  .dttw-ai {
+  .dttw-ai,
+  .dttw-news,
+  .dttw-news-error {
     display: none !important;
   }
 }

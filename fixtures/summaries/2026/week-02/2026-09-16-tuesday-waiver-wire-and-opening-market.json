@@ -1,0 +1,315 @@
+{
+  "schema_version": 2,
+  "season": 2026,
+  "week": 2,
+  "day": "tuesday-waivers",
+  "report": {
+    "path": "reports/2026/week-02/2026-09-16-tuesday-waiver-wire-and-opening-market.md",
+    "source": "s3",
+    "title": "Waiver wire and opening market -- 2026 week 2",
+    "covers": "week 2's waiver window; settlements also span week 1 (Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET)",
+    "week_window": "Tue 2026-09-15 03:00 - Tue 2026-09-22 03:00 ET",
+    "rendered": "Wed 2026-09-16 09:35 ET",
+    "sha256": "987a347f39acd955313abd90923b4fcc46ad162c77da8736f380a8dcc7e6015c",
+    "_fixture_note": "Keyed to the 2026-09-16 render, not the 09-15 one beside it: `dedupeRenders` collapses the pair to the newer render, so a summary keyed to the older date is unreachable at every URL. sha256 is the real digest, so this fixture is the fresh, grounded card."
+  },
+  "summary_markdown": "The decision due today is a single waiver claim, and the add-candidate block points at one name clearly enough that the rest of the window is housekeeping. Treat the `gap` column here as what it is: the projected points gained by adding the candidate *and* benching the weakest eligible player already on the roster, not the candidate's projection outright. Two of the listed adds shrink to almost nothing once that bench move is priced in.\n\nAgainst last week's report, the notable change is on the market side rather than the wire. The opening spreads moved toward the same side the projections already favoured, so nothing in the slate argues against the lineup that was trending anyway, and no settlement from week 1 reopened a roster spot that was assumed closed.\n\nWhat this report cannot see: it has no injury news later than the freshness stamps above, it does not know which claims the other eleven managers have already submitted, and every row marked `insufficient data` is a refusal to print a number, not a zero.",
+  "model": "gemini-3.8-flash",
+  "generated_at": "2026-09-15T21:20:11-04:00",
+  "prior_reports": [
+    "reports/2026/week-01/2026-09-09-wednesday-availability-watchlist.md"
+  ],
+  "prompt_sha256": "6a5f2c0d7b1e4938a2c5d8f0b3e7a196c4d2f8b05e93a7c16d0f4b82e5a93c71",
+  "usage": {
+    "promptTokenCount": 27313,
+    "candidatesTokenCount": 292,
+    "thoughtsTokenCount": 1906,
+    "cachedContentTokenCount": 0,
+    "totalTokenCount": 29511
+  },
+  "news": {
+    "model": "gemini-3.8-flash",
+    "grounded": true,
+    "generated_at": "2026-09-15T21:41:08-04:00",
+    "roster_week": 2,
+    "roster_export": "15-09-2026-weekly-rosters.csv",
+    "prompt_sha256": "c41f9b7e2d5a8036b1e4c7f902a5d8b36e1049fc7a2b5d80e3f6a9c14b7d2e50",
+    "search_query_count": 19,
+    "players": [
+      {
+        "player_id": 4431611,
+        "player_name": "Caleb Williams",
+        "position": "QB",
+        "pro_team": "CHI",
+        "lineup_slot": "QB",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": true,
+        "headline": "Full participant in Wednesday's practice.",
+        "detail": "Williams was not listed on Chicago's Wednesday injury report after taking a late hit in week 1. No designation is expected.",
+        "as_of": "2026-09-16"
+      },
+      {
+        "player_id": 4430807,
+        "player_name": "Bijan Robinson",
+        "position": "RB",
+        "pro_team": "ATL",
+        "lineup_slot": "RB",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": true,
+        "headline": "Limited Wednesday with an ankle issue.",
+        "detail": "Atlanta listed Robinson as limited. Head coach called it maintenance and said he expects a full session Thursday.",
+        "as_of": "2026-09-16"
+      },
+      {
+        "player_id": 4426515,
+        "player_name": "Puka Nacua",
+        "position": "WR",
+        "pro_team": "LAR",
+        "lineup_slot": "WR",
+        "group": "starters",
+        "espn_injury_status": "QUESTIONABLE",
+        "found": true,
+        "headline": "Questionable with a knee contusion.",
+        "detail": "Nacua did not practice Wednesday. The Rams have not ruled him out and a Friday designation is expected.",
+        "as_of": "2026-09-16"
+      },
+      {
+        "player_id": 4360438,
+        "player_name": "Trey McBride",
+        "position": "TE",
+        "pro_team": "ARI",
+        "lineup_slot": "TE",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 3916387,
+        "player_name": "Jahmyr Gibbs",
+        "position": "RB",
+        "pro_team": "DET",
+        "lineup_slot": "RB",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 4374302,
+        "player_name": "Malik Nabers",
+        "position": "WR",
+        "pro_team": "NYG",
+        "lineup_slot": "WR",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": true,
+        "headline": "Slot snap share up to 62% in week 1.",
+        "detail": "Nabers moved inside on a majority of passing downs, a role change from last season's perimeter usage.",
+        "as_of": "2026-09-15"
+      },
+      {
+        "player_id": 4241478,
+        "player_name": "Brock Bowers",
+        "position": "TE",
+        "pro_team": "LV",
+        "lineup_slot": "FLEX",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 15818,
+        "player_name": "Justin Tucker",
+        "position": "K",
+        "pro_team": "BAL",
+        "lineup_slot": "K",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": -16033,
+        "player_name": "Ravens D/ST",
+        "position": "DST",
+        "pro_team": "BAL",
+        "lineup_slot": "DST",
+        "group": "starters",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 4429025,
+        "player_name": "Tre Tucker",
+        "position": "WR",
+        "pro_team": "LV",
+        "lineup_slot": "Bench",
+        "group": "bench",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 4569618,
+        "player_name": "Rome Odunze",
+        "position": "WR",
+        "pro_team": "CHI",
+        "lineup_slot": "Bench",
+        "group": "bench",
+        "espn_injury_status": "ACTIVE",
+        "found": true,
+        "headline": "Promoted to WR2 ahead of this week's game.",
+        "detail": "Chicago's depth chart moved Odunze above the veteran after a 7-target opener.",
+        "as_of": "2026-09-16"
+      },
+      {
+        "player_id": 4596448,
+        "player_name": "Jaylen Wright",
+        "position": "RB",
+        "pro_team": "MIA",
+        "lineup_slot": "Bench",
+        "group": "bench",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 3128720,
+        "player_name": "Tyler Lockett",
+        "position": "WR",
+        "pro_team": "SEA",
+        "lineup_slot": "Bench",
+        "group": "bench",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      },
+      {
+        "player_id": 4362628,
+        "player_name": "Tank Bigsby",
+        "position": "RB",
+        "pro_team": "JAX",
+        "lineup_slot": "Bench",
+        "group": "bench",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the model returned no entry for this player"
+      },
+      {
+        "player_id": 4038941,
+        "player_name": "Jake Ferguson",
+        "position": "TE",
+        "pro_team": "DAL",
+        "lineup_slot": "Bench",
+        "group": "bench",
+        "espn_injury_status": "ACTIVE",
+        "found": false,
+        "headline": null,
+        "detail": null,
+        "as_of": null,
+        "note": "the grounded search returned nothing for this player"
+      }
+    ],
+    "groups": {
+      "starters": {
+        "players": 9,
+        "grounded": true,
+        "search_queries": [
+          "Bears injury report September 2026",
+          "Puka Nacua knee practice"
+        ],
+        "sources": [
+          {
+            "uri": "https://www.espn.com/nfl/injuries",
+            "title": "NFL Injuries - ESPN"
+          },
+          {
+            "uri": "https://www.nfl.com/news/",
+            "title": "NFL News"
+          },
+          {
+            "uri": "https://www.theathletic.com/nfl/",
+            "title": "NFL - The Athletic"
+          }
+        ],
+        "search_entry_point": "<div class=\"gsc\">Search Suggestions</div>",
+        "usage": {
+          "promptTokenCount": 3812,
+          "candidatesTokenCount": 604,
+          "thoughtsTokenCount": 4161,
+          "cachedContentTokenCount": 0,
+          "totalTokenCount": 8577
+        }
+      },
+      "bench": {
+        "players": 6,
+        "grounded": true,
+        "search_queries": [
+          "Rome Odunze depth chart",
+          "Jaylen Wright snap share"
+        ],
+        "sources": [
+          {
+            "uri": "https://www.espn.com/nfl/injuries",
+            "title": "NFL Injuries - ESPN"
+          },
+          {
+            "uri": "https://www.rotowire.com/football/",
+            "title": "Fantasy Football News - RotoWire"
+          }
+        ],
+        "search_entry_point": "<div class=\"gsc\">Search Suggestions</div>",
+        "usage": {
+          "promptTokenCount": 3812,
+          "candidatesTokenCount": 604,
+          "thoughtsTokenCount": 4161,
+          "cachedContentTokenCount": 0,
+          "totalTokenCount": 8577
+        }
+      },
+      "ir": {
+        "skipped": "no players in the ir group for week 2"
+      }
+    },
+    "usage": {
+      "promptTokenCount": 7624,
+      "candidatesTokenCount": 1208,
+      "thoughtsTokenCount": 8322,
+      "cachedContentTokenCount": 0,
+      "totalTokenCount": 17154
+    }
+  },
+  "news_error": null
+}

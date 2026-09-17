@@ -1,0 +1,282 @@
+---
+import Badge from './ui/Badge.astro';
+import { formatAsOf, type RosterNews } from '../lib/news';
+
+export interface Props {
+  news: RosterNews;
+  sources: { uri: string; title: string; host: string }[];
+  model: string;
+  generatedAt: string;
+  grounded: boolean;
+  searchQueryCount: number;
+}
+
+const { news, sources, model, generatedAt, grounded, searchQueryCount } = Astro.props as Props;
+---
+
+<section class="dttw-news" data-grounded={grounded ? 'true' : 'false'}>
+  <div class="dttw-news__head">
+    <span class="flabel">Roster news</span>
+    {!grounded && <Badge tone="alert">Search did not fire — unsourced</Badge>}
+  </div>
+
+  {!grounded && (
+    <p class="dttw-news__warning">
+      At least one group came back with no grounding metadata, so its items came from the
+      model's own recall rather than a search run today. Treat them as unverified.
+    </p>
+  )}
+
+  {news.groups.map((group) => (
+    <div class="dttw-news__group">
+      <div class="dttw-news__grouphead">
+        <span class="dttw-news__grouplabel">{group.label}</span>
+        {group.skipped ? (
+          <span class="dttw-news__count">none this week</span>
+        ) : (
+          <span class="dttw-news__count">{group.foundCount} of {group.totalCount} with news</span>
+        )}
+      </div>
+
+      {group.skipped ? (
+        <p class="dttw-news__skipped">{group.skipped}</p>
+      ) : (
+        <ul class="dttw-news__list">
+          {group.players.map((player) => (
+            <li class="dttw-news__item" data-found={player.found ? 'true' : 'false'}>
+              <div class="dttw-news__who">
+                <span class="dttw-news__name">{player.player_name ?? `Player ${player.player_id}`}</span>
+                {player.position && <span class="dttw-news__tag">{player.position}</span>}
+                {player.pro_team && <span class="dttw-news__tag">{player.pro_team}</span>}
+              </div>
+              {player.found ? (
+                <div class="dttw-news__body">
+                  <p class="dttw-news__headline">
+                    {player.headline}
+                    {formatAsOf(player.as_of) && (
+                      <span class="dttw-news__asof">as of {formatAsOf(player.as_of)}</span>
+                    )}
+                  </p>
+                  {player.detail && <p class="dttw-news__detail">{player.detail}</p>}
+                </div>
+              ) : (
+                <p class="dttw-news__none">No news found</p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  ))}
+
+  {sources.length > 0 && (
+    <p class="dttw-news__sources">
+      <span class="dttw-news__sourcelabel">Sources</span>
+      {sources.map((source) => (
+        <a href={source.uri} target="_blank" rel="noopener noreferrer nofollow" title={source.title || source.uri}>
+          {source.host}
+        </a>
+      ))}
+    </p>
+  )}
+
+  <p class="dttw-news__meta">
+    Researched by <code>{model}</code> · {generatedAt}
+    {searchQueryCount > 0 && ` · ${searchQueryCount} ${searchQueryCount === 1 ? 'search' : 'searches'}`}
+  </p>
+</section>
+
+<style>
+  /* Same reasoning as `.dttw-ai`: a generated artifact with its own
+     lifecycle gets a container that cannot be mistaken for the report's own
+     deterministic output. Grey rather than the summary's blue because the
+     two cards sit adjacent and are different artifacts — and grey is
+     already in the ramp, so distinguishing them costs no new token. */
+  .dttw-news {
+    border: 1px solid var(--line-default);
+    border-left: 3px solid var(--grey-500);
+    border-radius: 5px;
+    background: var(--surface-sunken);
+    padding: var(--space-5) var(--space-6);
+  }
+
+  /* Ungrounded means the items came from recall, which is the one failure
+     mode nothing downstream can detect by reading the text. It gets the
+     alert treatment for the whole card, not a footnote. */
+  .dttw-news[data-grounded='false'] {
+    border-left-color: var(--alert-text);
+  }
+
+  .dttw-news__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-4);
+  }
+
+  .dttw-news__head .flabel {
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .dttw-news__warning {
+    margin: 0 0 var(--space-4);
+    font: var(--type-body-sm);
+    color: var(--alert-text);
+  }
+
+  .dttw-news__group + .dttw-news__group {
+    margin-top: var(--space-5);
+  }
+
+  .dttw-news__grouphead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: var(--border-subtle);
+  }
+
+  .dttw-news__grouplabel {
+    font: var(--type-label);
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .dttw-news__count,
+  .dttw-news__skipped {
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+
+  .dttw-news__skipped {
+    margin: var(--space-3) 0 0;
+  }
+
+  .dttw-news__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dttw-news__item {
+    display: flex;
+    gap: var(--space-4);
+    padding: var(--space-3) 0;
+    border-bottom: var(--border-subtle);
+  }
+
+  .dttw-news__item:last-child {
+    border-bottom: none;
+  }
+
+  /* The roster guarantee is that everyone appears; the difference between a
+     finding and a blank has to be carried by weight, not by presence. */
+  .dttw-news__item[data-found='false'] {
+    color: var(--text-muted);
+  }
+
+  .dttw-news__who {
+    flex: 0 0 168px;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .dttw-news__name {
+    font: var(--type-body-sm);
+    color: var(--text-primary);
+  }
+
+  .dttw-news__item[data-found='false'] .dttw-news__name {
+    color: var(--text-secondary);
+  }
+
+  .dttw-news__tag {
+    font: var(--type-data);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .dttw-news__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dttw-news__headline {
+    margin: 0;
+    font: var(--type-body-sm);
+    color: var(--text-primary);
+  }
+
+  .dttw-news__asof {
+    margin-left: var(--space-3);
+    font: var(--type-data);
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .dttw-news__detail {
+    margin: var(--space-2) 0 0;
+    font: var(--type-body-sm);
+    color: var(--text-secondary);
+  }
+
+  .dttw-news__none {
+    flex: 1;
+    margin: 0;
+    font: var(--type-body-sm);
+    color: var(--text-muted);
+  }
+
+  .dttw-news__sources {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    margin: var(--space-5) 0 0;
+    padding-top: var(--space-4);
+    border-top: var(--border-subtle);
+    font: var(--type-caption);
+  }
+
+  .dttw-news__sourcelabel {
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+    color: var(--text-muted);
+  }
+
+  .dttw-news__sources a {
+    color: var(--text-secondary);
+  }
+
+  .dttw-news__meta {
+    margin: var(--space-4) 0 0;
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+
+  .dttw-news__meta code {
+    font: var(--type-data);
+    font-size: 11.5px;
+  }
+
+  /* The two-column player row assumes room the phone doesn't have. */
+  @media (max-width: 700px) {
+    .dttw-news {
+      padding: var(--space-4) var(--space-5);
+    }
+    .dttw-news__item {
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .dttw-news__who {
+      flex: none;
+    }
+  }
+</style>

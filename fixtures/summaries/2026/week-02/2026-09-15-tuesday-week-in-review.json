@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "season": 2026,
   "week": 2,
   "day": "tuesday",
@@ -13,7 +13,7 @@
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
     "_fixture_note": "sha256 is deliberately wrong so this fixture exercises the stale marker; the real digest of the report beside it is 80b066f24cbff77ac3aa7d8555c3edf69a2d290150f3f34f8187b86ec9f223ca"
   },
-  "summary_markdown": "No action is due off this report — it is retrospective, and the regret table below is the part most likely to be misread as a start/sit instruction. It is not one. Each row is an independent counterfactual against the same bench, so the same player can answer several rows, and the `gap` column does not add up. `optimal_lineup` is the one figure here that legitimately aggregates the week.\n\nAgainst week 1 there is no prior to compare with, so nothing in this report describes a change; it describes a baseline. The scoring margins were wide enough that no single lineup decision flipped a result.\n\nWhat this report cannot see: it knows nothing about injuries or usage after the window closed, it has no view of what the waiver wire will offer tomorrow, and a retrospective margin over a bench player says nothing about whether that player should start next week.",
+  "summary_markdown": "No action is due off this report \u2014 it is retrospective, and the regret table below is the part most likely to be misread as a start/sit instruction. It is not one. Each row is an independent counterfactual against the same bench, so the same player can answer several rows, and the `gap` column does not add up. `optimal_lineup` is the one figure here that legitimately aggregates the week.\n\nAgainst week 1 there is no prior to compare with, so nothing in this report describes a change; it describes a baseline. The scoring margins were wide enough that no single lineup decision flipped a result.\n\nWhat this report cannot see: it knows nothing about injuries or usage after the window closed, it has no view of what the waiver wire will offer tomorrow, and a retrospective margin over a bench player says nothing about whether that player should start next week.",
   "model": "gemini-3.8-flash",
   "generated_at": "2026-09-15T10:06:52-04:00",
   "prior_reports": [],
@@ -24,5 +24,7 @@
     "thoughtsTokenCount": 1742,
     "cachedContentTokenCount": 20450,
     "totalTokenCount": 26183
-  }
+  },
+  "news": null,
+  "news_error": "bench: HTTP 503 from gemini-3.8-flash:generateContent after 4 attempts"
 }

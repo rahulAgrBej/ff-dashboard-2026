@@ -1,0 +1,27 @@
+---
+export interface Props {
+  reason: string;
+}
+const { reason } = Astro.props as Props;
+---
+
+<p class="dttw-news-error">
+  <span class="flabel">Roster news</span> unavailable — {reason}
+</p>
+
+<style>
+  /* Deliberately a line, not a card. A failed news layer is worth saying
+     out loud — it is distinct from "not generated yet", which stays silent
+     — but it carries no content, so giving it a card's weight would make an
+     absence look like a finding. */
+  .dttw-news-error {
+    margin: 0;
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+
+  .dttw-news-error .flabel {
+    text-transform: uppercase;
+    letter-spacing: var(--ls-label);
+  }
+</style>

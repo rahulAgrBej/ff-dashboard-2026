@@ -10,6 +10,8 @@ browser → Cloudflare Worker (Astro SSR)
             └─ aws4fetch SigV4 → s3://espn-ff-data-2026/{reports,summaries}/**
 ```
 
+One object per report under each prefix. The `summaries/` envelope carries two independent AI layers — the summary, and the grounded roster news — at one key.
+
 The upstream repo is never modified. The Worker reads `reports/<season>/week-<NN>/<date>-<day>-<slug>.md` out of the bucket on every request, listing once per 300s and caching each rendered report body forever under a key that includes its S3 ETag — so a same-day re-run of a report (which upstream explicitly tolerates) is served correctly with no purge logic anywhere.
 
 ### AI summaries
@@ -21,6 +23,24 @@ Three properties of that upstream design shape this side:
 - **Absence is normal.** Summaries are produced by a separate workflow that trails each report by up to ~20 minutes and writes nothing when a generation fails. A report with no summary renders alone, with no placeholder — `loadSummary` returns `null` and never throws, so a missing, malformed, or future-schema envelope costs the page nothing.
 - **Staleness is checked against the artifact, not the clock.** The envelope stores `report.sha256` over the report's full markdown. The Worker hashes the body it is about to render and marks the card stale on mismatch, so a summary describing an earlier render of the same key is labelled rather than silently trusted.
 - **The summary is never part of the report.** It is not spliced into `markdown`, so `#dttw-raw` and Copy markdown stay byte-identical to the S3 object. The card is hidden in Markdown view and in print.
+
+### Grounded roster news
+
+The same envelope carries a **second, independent layer**. Every feed the reports are built from lags the real world by hours to days, and the summary layer is forbidden by its own house rules from supplying outside knowledge — so upstream added three Google-Search-grounded calls per report (starters / bench / IR) returning the latest news on every rostered player. The result is stored as a `news` field beside `summary_markdown`, never merged into it.
+
+It shares the report's key, the `summaries/` prefix and the 300s listing, so **it costs no extra request and needs no IAM change** — `src/lib/news.ts` shapes a block that `loadSummary` has already fetched. The card renders directly below the report header, above everything else on the page.
+
+The envelope is `schema_version: 2`; v1 carried the summary alone. The bump was strictly additive — every v1 key kept its name, position and meaning — so `src/lib/summaries.ts` accepts both and a v1 envelope simply has no news to show. A version beyond the supported set is still treated as absent rather than rendered on guessed field names.
+
+Three upstream guarantees shape how this renders:
+
+- **Every rostered player appears.** Upstream reconciles the model's answer against the roster it was given, materialising anyone the model skipped with `found: false` and a note. "We looked and found nothing" and "the model never answered" are different findings, and neither may render as a finding — so every player is shown, and only the visual weight differs.
+- **`grounded: false` is the layer working, not failing.** It means the search tool never fired and those items came from model recall — roughly one call in four upstream. The card carries an alert badge and an explicit warning rather than hiding it, because it is the one failure nobody can detect by reading the text.
+- **News is never a lineup call.** Its house rules forbid it, because the report beside it owns that decision and cannot see what the search found. Nothing in the card's copy frames news as advice.
+
+The two layers fail independently upstream and degrade independently here: a dead grounded call stores `news: null` with a `news_error`, which renders as one muted line — distinct from "not generated yet", which stays silent — while the summary and report beside it render normally.
+
+**Known gap:** Google's grounding terms ask that the Search Suggestions blob (`search_entry_point`) be displayed wherever grounded results are shown. It is stored in every envelope but not rendered — its Google-styled chips clash with this site's design. Honouring it later is a component-only change; the data is already there. The per-group `sources` **are** rendered, as a deduped host list. Attribution upstream is group-level only, so they are shown once for the whole block rather than per player.
 
 `src/lib/schedule.ts` encodes the eight-report weekly schedule from `docs/report-weekly-schedule.md` so every week always renders all eight slots — published, pending (scheduled, still missing), or planned (not built upstream yet) — even though only Monday's report is implemented today. Widen `IMPLEMENTED_DAYS` there as upstream ships the rest.
 
@@ -39,7 +59,9 @@ Two ways to run it:
 npm run dev
 ```
 
-This serves `fixtures/reports/**` and `fixtures/summaries/**` — a synthetic 3-group tree exercising a Tuesday double-report, a re-rendered duplicate (same `(season, week, slug)`, newer `**Rendered**` timestamp, to exercise `dedupeRenders`), a deliberate gap (to see the `pending` state), and a cross-season sort — instead of calling S3. The summary fixtures cover all three states: one envelope whose `report.sha256` matches the report beside it (fresh card), one with a deliberately wrong digest (stale marker), and three reports with no summary at all (no card). It's the only way to exercise the index/sidebar/week-grouping logic today, since the real bucket holds a handful of reports.
+This serves `fixtures/reports/**` and `fixtures/summaries/**` — a synthetic 3-group tree exercising a Tuesday double-report, a re-rendered duplicate (same `(season, week, slug)`, newer `**Rendered**` timestamp, to exercise `dedupeRenders`), a deliberate gap (to see the `pending` state), and a cross-season sort — instead of calling S3. The summary fixtures cover every state of both layers. Summary: a matching `report.sha256` (fresh card), a deliberately wrong digest (stale marker), and reports with no envelope at all (no card). News: one grounded block with a mix of findings and honest blanks and an empty IR group (`skipped`), one ungrounded block (`grounded: false`, the unsourced warning), and one `news: null` with a `news_error` (the muted unavailable line).
+
+Note: the waiver summary fixture is keyed to the **2026-09-16** render, not the 09-15 one beside it. `dedupeRenders` collapses that pair to the newer render, so a summary keyed to the older date is unreachable at every URL — a fixture keyed that way looks like a broken summary card rather than a stale fixture. It's the only way to exercise the index/sidebar/week-grouping logic today, since the real bucket holds a handful of reports.
 
 Note: the fixture slug `waiver-wire-and-opening-market` has drifted from the bucket's `waiver-wire` — that's intentional, not a bug to fix; the two are free to diverge since fixtures only need to be internally consistent with each other.
 
@@ -94,6 +116,11 @@ npx wrangler deploy
 - **Caching**: `npx wrangler tail` while reloading — one `ListObjectsV2` per 300s, no repeat `GetObject` for an unchanged report; `?nocache=1` forces both.
 - **Interactions**: toggle Rendered/Markdown (the raw view must match the source byte-for-byte), Copy markdown, Print, and that the view choice survives a reload.
 - **AI summaries**: the card sits between the freshness row and the body; the waiver summary is on the waiver report and the week-in-review summary on its own (never swapped); the wrong-digest fixture shows the stale marker; a report with no envelope shows no card; and the card disappears in Markdown view and in print. Corrupting a summary fixture must leave the report rendering at HTTP 200 with no card.
+- **Roster news**: the card sits directly below the report header, above the freshness row, the AI summary and the body. Every rostered player in the fixture appears — `found: false` players render as muted "No news found" lines, visibly distinct from real findings; the IR group shows its skip reason; the group counts read "N of M with news". The monday fixture (`grounded: false`) shows the alert badge, the alert-toned border and the unsourced warning; the waiver fixture does not. The week-in-review fixture shows the one-line "unavailable" note and still renders its summary card and body normally. The card disappears in Markdown view and in print.
+- **News degradation**: setting a fixture's `news` to a string, or removing its `players` array, must leave the page at HTTP 200 with the summary and report intact and no news card. Bumping `schema_version` past the supported set must drop **both** cards and still render the report.
+- **No extra cost**: `npx wrangler tail` while reloading — the news must add no `ListObjectsV2` and no `GetObject`, since it rides the envelope the summary card already fetched.
+
+Note: `import.meta.glob` is eager, so **adding or removing a fixture file needs a dev-server restart**, and the 300s listing cache survives that restart — use `?nocache=1` after changing which fixture keys exist, or the listing will still describe the old set.
 - **Failure path**: an invalid/missing AWS secret renders a clean empty state, never a 500.
 - **Responsive**: check both the desktop (topbar, two-column layout) and mobile (compact header, bottom tabs, no view toggle) layouts.
 
@@ -101,16 +128,17 @@ npx wrangler deploy
 
 ```
 src/
-├── lib/           s3.ts, reports.ts, summaries.ts, schedule.ts, cache.ts, render.ts, env.ts
+├── lib/           s3.ts, reports.ts, summaries.ts, news.ts, schedule.ts, cache.ts, render.ts, env.ts
 ├── layouts/       Shell.astro
-├── components/    Topbar, ReportHeader, FreshnessRow, AiSummary, ReportArticle,
-│                  ReportIndex, NextReportNote, MobileTabs, EmptyState, ui/*
+├── components/    Topbar, ReportHeader, FreshnessRow, AiSummary, RosterNews,
+│                  NewsUnavailable, ReportArticle, ReportIndex, NextReportNote,
+│                  MobileTabs, EmptyState, ui/*
 ├── styles/        tokens.css, global.css, print.css
 └── pages/         index.astro, reports/index.astro, reports/[season]/[week]/[slug].astro
 ```
 
-`src/lib/s3.ts`, `src/lib/reports.ts`, and `src/lib/summaries.ts` are the only files that know what a bucket, key, or signature is — pages and components work entirely in terms of `ReportMeta` and rendered HTML.
+`src/lib/s3.ts`, `src/lib/reports.ts`, and `src/lib/summaries.ts` are the only files that know what a bucket, key, or signature is (`src/lib/news.ts` is pure shaping over an envelope already fetched) — pages and components work entirely in terms of `ReportMeta` and rendered HTML.
 
 ## Out of scope
 
-Charts, R2, auth, dark mode, search, RSS, multi-league support, a settings page. (JSON ingestion is now in scope only for the `summaries/` envelopes described above — no other JSON is read.)
+Charts, R2, auth, dark mode, search, RSS, multi-league support, a settings page. (JSON ingestion is in scope only for the `summaries/` envelopes described above — both layers they carry — and no other JSON is read.)
