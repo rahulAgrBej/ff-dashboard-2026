@@ -60,6 +60,7 @@
       ],
       "emphasis": true,
       "data": {
+        "binding": true,
         "held_open": 2,
         "points_left_on_table": 31.8,
         "out_starter_count": null
@@ -92,6 +93,11 @@
           "type": "number"
         },
         {
+          "key": "bye",
+          "label": "bye",
+          "type": "boolean"
+        },
+        {
           "key": "outcome",
           "label": "outcome",
           "type": "string"
@@ -103,6 +109,7 @@
           "tier": "probable",
           "bid": 14,
           "projection": 17.4,
+          "bye": false,
           "outcome": "Claimed by us"
         },
         {
@@ -110,6 +117,7 @@
           "tier": "questionable",
           "bid": 8,
           "projection": 11.2,
+          "bye": true,
           "outcome": "Claimed by others"
         },
         {
@@ -117,6 +125,7 @@
           "tier": null,
           "bid": null,
           "projection": null,
+          "bye": null,
           "outcome": "Newly available"
         },
         {
@@ -124,6 +133,7 @@
           "tier": "out",
           "bid": 3,
           "projection": 0.0,
+          "bye": false,
           "outcome": "Unclaimed"
         }
       ],
@@ -225,6 +235,74 @@
       "level": 2,
       "kind": "insufficient",
       "reason": "no odds snapshot for this week"
+    },
+    {
+      "id": "drop-candidates",
+      "heading": "Drop candidates",
+      "level": 2,
+      "kind": "blocks",
+      "blocks": [
+        {
+          "id": "drop-candidates-lead",
+          "heading": null,
+          "level": null,
+          "kind": "prose",
+          "emphasis": false,
+          "body": [
+            "No drop is forced this week."
+          ]
+        },
+        {
+          "id": "drop-candidates-rows",
+          "heading": null,
+          "level": null,
+          "kind": "table",
+          "columns": [
+            {
+              "key": "player_name",
+              "label": "player",
+              "type": "string"
+            },
+            {
+              "key": "rostered",
+              "label": "rostered",
+              "type": "boolean"
+            },
+            {
+              "key": "proj",
+              "label": "proj",
+              "type": "number"
+            }
+          ],
+          "rows": [
+            {
+              "player_name": "Tyler Allgeier",
+              "rostered": true,
+              "proj": 6.1
+            },
+            {
+              "player_name": "Cedric Tillman",
+              "rostered": true,
+              "proj": null
+            }
+          ],
+          "notes": []
+        },
+        {
+          "id": "drop-candidates-note",
+          "heading": null,
+          "level": null,
+          "kind": "prose",
+          "emphasis": false,
+          "body": [
+            "*Held by design \u2014 the bench is the injury hedge.*"
+          ]
+        }
+      ],
+      "data": {
+        "by_design": true,
+        "count": 0
+      }
     },
     {
       "id": "cannot-see",

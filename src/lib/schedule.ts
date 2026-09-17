@@ -25,8 +25,16 @@ export const SCHEDULE: ScheduleSlot[] = [
   { order: 8, day: 'sunday', timeEt: '11:30', key: 'pre_lock_call', title: 'Pre-lock call' },
 ];
 
-/** Widen as upstream ships days. Without this, every week would read "1 of 8, seven failures" for reports that were never built. */
-export const IMPLEMENTED_DAYS: string[] = ['monday', 'tuesday'];
+/**
+ * Widen as upstream ships days. Without this, every week would read "1 of 8,
+ * seven failures" for reports that were never built.
+ *
+ * Wednesday and Thursday were added once the bucket began carrying
+ * `availability-watchlist` and `usage-and-market` objects — before that they
+ * rendered as `planned`, i.e. "not built upstream yet", which was no longer
+ * true.
+ */
+export const IMPLEMENTED_DAYS: string[] = ['monday', 'tuesday', 'wednesday', 'thursday'];
 
 /** Read STALE_AFTER_HOURS below before tightening — only Monday and Tuesday are implemented, so reports land twice a week. */
 export const STALE_AFTER_HOURS = 192;
@@ -136,6 +144,18 @@ export interface MergedSlot {
   short?: string;
   state: SlotState;
   report?: ReportMeta;
+  /**
+   * A report filling this slot under a *different* prefix than the one
+   * `state` describes.
+   *
+   * Set only when the caller supplies `fallbackReports`, and only on a slot
+   * that is not `published` in its own listing. The daily surface uses it to
+   * say "this report exists as markdown but has no structured twin", which is
+   * a different fact from "upstream has not produced it yet" — and with the
+   * structured prefix starting mid-season, the second reading would be wrong
+   * for most of the week.
+   */
+  markdownReport?: ReportMeta;
   slotDate: string | null; // YYYY-MM-DD this slot represents — from the report's dateline when published, else the week window's slot day
 }
 
@@ -147,15 +167,34 @@ function matchSlot(day: string, slug: string): ScheduleSlot | undefined {
 }
 
 /** Merges the 8-slot schedule against real reports for one (season, week). An unmatched (or slot-colliding) real report is appended, never dropped — a real report is never hidden by the schedule model. */
+export interface MergeOptions {
+  windows?: Map<string, WeekWindow>;
+  /** Reports from the other prefix, used only to annotate slots this listing could not fill. Never affects `state`. */
+  fallbackReports?: ReportMeta[];
+}
+
 export function mergeSlots(
   reports: ReportMeta[],
   season: number,
   week: number,
   now: Date,
-  windows?: Map<string, WeekWindow>
+  options: MergeOptions = {}
 ): MergedSlot[] {
+  const { windows, fallbackReports } = options;
   const weekReports = reports.filter((r) => r.season === season && r.week === week);
   const range = weekDateRange(season, week, windows);
+
+  // Resolved through the same `matchSlot` the primary listing uses, so a
+  // fallback lands in exactly the slot its own prefix would have claimed —
+  // including the Tuesday pair, which is disambiguated by slug.
+  const fallbackBySlotKey = new Map<string, ReportMeta>();
+  for (const r of fallbackReports ?? []) {
+    if (r.season !== season || r.week !== week) continue;
+    const slot = matchSlot(r.day, r.slug);
+    if (!slot) continue;
+    const existing = fallbackBySlotKey.get(slot.key);
+    if (!existing || compareRenderRecency(r, existing) < 0) fallbackBySlotKey.set(slot.key, r);
+  }
 
   const bySlotKey = new Map<string, ReportMeta>();
   const extras: ReportMeta[] = [];
@@ -203,6 +242,7 @@ export function mergeSlots(
       short: slot.short,
       state,
       report: match,
+      markdownReport: match ? undefined : fallbackBySlotKey.get(slot.key),
       slotDate,
     };
   });
@@ -258,14 +298,23 @@ export interface WeekSummary {
  * the season from it — so one object labels the whole sidebar and the
  * dateline fan-out can be skipped entirely.
  */
+export interface WeekSummaryOptions extends MergeOptions {
+  /** Week windows the caller already holds, avoiding the dateline fetches `collectWeekWindows` depends on. */
+  seedWindows?: Map<string, WeekWindow>;
+}
+
 export function buildWeekSummaries(
   reports: ReportMeta[],
   now: Date,
-  seedWindows?: Map<string, WeekWindow>
+  options: WeekSummaryOptions = {}
 ): WeekSummary[] {
+  const { seedWindows, fallbackReports } = options;
   const windows = seedWindows?.size ? seedWindows : collectWeekWindows(reports);
+  // Weeks come from both listings: a week present only in the fallback still
+  // deserves a group, or the daily sidebar would silently omit a week whose
+  // reports all exist as markdown alone.
   const seen = new Map<string, { season: number; week: number }>();
-  for (const r of reports) {
+  for (const r of [...reports, ...(fallbackReports ?? [])]) {
     seen.set(`${r.season}-${r.week}`, { season: r.season, week: r.week });
   }
   const weeks = Array.from(seen.values()).sort((a, b) => b.season - a.season || b.week - a.week);
@@ -276,7 +325,7 @@ export function buildWeekSummaries(
       season,
       week,
       label: range ? `Week ${week} · ${range.label}` : `Week ${week}`,
-      slots: mergeSlots(reports, season, week, now, windows),
+      slots: mergeSlots(reports, season, week, now, { windows, fallbackReports }),
     };
   });
 }

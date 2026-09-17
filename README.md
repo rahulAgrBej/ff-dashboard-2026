@@ -127,7 +127,9 @@ The two layers fail independently upstream and degrade independently here: a dea
 
 **Known gap:** Google's grounding terms ask that the Search Suggestions blob (`search_entry_point`) be displayed wherever grounded results are shown. It is stored in every envelope but not rendered — its Google-styled chips clash with this site's design. Honouring it later is a component-only change; the data is already there. The per-group `sources` **are** rendered, as a deduped host list. Attribution upstream is group-level only, so they are shown once for the whole block rather than per player.
 
-`src/lib/schedule.ts` encodes the eight-report weekly schedule from `docs/report-weekly-schedule.md` so every week always renders all eight slots — published, pending (scheduled, still missing), or planned (not built upstream yet) — even though only Monday's report is implemented today. Widen `IMPLEMENTED_DAYS` there as upstream ships the rest.
+`src/lib/schedule.ts` encodes the eight-report weekly schedule from `docs/report-weekly-schedule.md` so every week always renders all eight slots — published, pending (scheduled, still missing), or planned (not built upstream yet). Widen `IMPLEMENTED_DAYS` there as upstream ships the rest; it currently covers Monday through Thursday.
+
+On the **daily** sidebar a slot with no structured twin but a real markdown report behind it renders as **markdown only**, linking into the archive, rather than as `pending` or `planned`. With the structured prefix starting mid-season, "upstream has not produced this" would be the wrong reading for most of a week, and it is a different fact from "produced, no structured twin" — the same distinction `noFindingKind` draws in the news layer. The archive sidebar is unaffected: its own listing is the complete one.
 
 ## Local development
 
@@ -212,6 +214,41 @@ npx wrangler secret put AWS_SECRET_ACCESS_KEY_ID
 npm run build
 npx wrangler deploy
 ```
+
+## Troubleshooting
+
+**The homepage is empty with `ListObjectsV2 failed for prefix "reports-json/": 403 Forbidden (AccessDenied)`.**
+The reader's IAM policy does not grant that prefix. This is the failure the
+bootstrap section warns about, and it happened once already: the policy was
+created with `reports/*` and `summaries/*` before the structured prefix
+existed, and **`reports-json/` does not match `reports/*`** — IAM's
+`StringLike` reads that pattern as the literal characters `reports/` followed
+by anything, and the real prefix has `reports-` at that position.
+
+Both statements need widening. Granting only `ListBucket` moves the 403 from
+the listing to the first `GetObject`. Diagnose it without guessing:
+
+```sh
+aws iam simulate-principal-policy \
+  --policy-source-arn arn:aws:iam::<account>:user/ff-dashboard-reader \
+  --action-names s3:ListBucket \
+  --resource-arns arn:aws:s3:::espn-ff-data-2026 \
+  --context-entries 'ContextKeyName=s3:prefix,ContextKeyValues=reports-json/,ContextKeyType=string' \
+  --query 'EvaluationResults[0].EvalDecision' --output text
+```
+
+`implicitDeny` confirms it. Apply the policy from the bootstrap section above;
+IAM is evaluated per request, so **no redeploy or purge is needed** — the 300s
+listing TTL bounds how long the failure is still served, and `?nocache=1`
+skips it.
+
+Both `listObjects` and `getObject` name the prefix or key **and** S3's own
+error code from the response body, and `S3Error.code` carries it so callers
+can branch on the cause. `loadDailyPage` uses that to tell a denied prefix
+(a configuration fix, with the archive still working) from an unreachable
+bucket and from an honestly empty prefix. There is deliberately **no**
+automatic fallback to rendering markdown at `/`: that would hide exactly this
+misconfiguration.
 
 ## Verification checklist
 

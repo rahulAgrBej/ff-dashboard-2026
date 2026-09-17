@@ -16,10 +16,47 @@ export interface S3Env {
 }
 
 export class S3Error extends Error {
-  constructor(message: string) {
+  /**
+   * S3's own error code from the response body, e.g. `AccessDenied` or
+   * `NoSuchKey`. Undefined when the body was empty or unparseable.
+   *
+   * Carried as a field so a caller can branch on the cause without
+   * string-matching a human-readable message — the difference between "the
+   * policy does not grant this prefix" and "the bucket is unreachable" is the
+   * difference between a configuration fix and an outage.
+   */
+  readonly code?: string;
+
+  constructor(message: string, code?: string) {
     super(message);
     this.name = 'S3Error';
+    this.code = code;
   }
+}
+
+/**
+ * S3 returns a machine-readable reason in the response body on a failure:
+ *
+ *   <Error><Code>AccessDenied</Code><Message>Access Denied</Message>…​</Error>
+ *
+ * Reading it is what turns "403 Forbidden" into "403 Forbidden
+ * (AccessDenied)". Guarded throughout: this runs *inside* an error path, so
+ * an empty, truncated or non-XML body must degrade to no code rather than
+ * throw a second error over the first and lose the original status.
+ */
+async function errorCodeOf(res: Response): Promise<string | undefined> {
+  try {
+    const body = await res.text();
+    return /<Code>([\s\S]*?)<\/Code>/.exec(body)?.[1]?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** `403 Forbidden (AccessDenied)`, or just `403 Forbidden` when the body carried no code. */
+function statusOf(res: Response, code: string | undefined): string {
+  const status = `${res.status} ${res.statusText}`;
+  return code ? `${status} (${code})` : status;
 }
 
 function endpointFor(env: S3Env) {
@@ -151,7 +188,15 @@ export async function listObjects(env: S3Env, prefix: string): Promise<S3Object[
 
     const res = await aws.fetch(url.toString());
     if (!res.ok) {
-      throw new S3Error(`ListObjectsV2 failed: ${res.status} ${res.statusText}`);
+      // Naming the prefix is not cosmetic: three prefixes are listed per
+      // page under separate IAM grants, so "ListObjectsV2 failed: 403" alone
+      // does not say which one is denied — and the answer decides whether the
+      // daily surface, the summary cards, or the whole site is affected.
+      const code = await errorCodeOf(res);
+      throw new S3Error(
+        `ListObjectsV2 failed for prefix "${prefix}": ${statusOf(res, code)}`,
+        code
+      );
     }
     const xml = await res.text();
     objects.push(...parseListObjectsXml(xml, prefix));
@@ -172,7 +217,8 @@ export async function getObject(env: S3Env, key: string): Promise<string> {
   const url = `${endpointFor(env)}/${key.split('/').map(encodeURIComponent).join('/')}`;
   const res = await aws.fetch(url);
   if (!res.ok) {
-    throw new S3Error(`GetObject failed for ${key}: ${res.status} ${res.statusText}`);
+    const code = await errorCodeOf(res);
+    throw new S3Error(`GetObject failed for ${key}: ${statusOf(res, code)}`, code);
   }
   return res.text();
 }

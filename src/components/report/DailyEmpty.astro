@@ -1,0 +1,69 @@
+---
+import EmptyState from '../EmptyState.astro';
+import Button from '../ui/Button.astro';
+import Icon from '../ui/Icon.astro';
+import type { DailyPage } from '../../lib/page';
+
+export interface Props {
+  page: DailyPage;
+}
+const { page } = Astro.props as Props;
+
+const TITLES: Record<string, string> = {
+  denied: 'The structured reports are not readable',
+  unreachable: 'The bucket could not be reached',
+  unreadable: 'This report’s structured form could not be read',
+  'not-found': 'No structured report at this address',
+  empty: 'No structured reports yet',
+};
+
+const ICONS = {
+  denied: 'x-circle',
+  unreachable: 'x-circle',
+  unreadable: 'alert-triangle',
+  'not-found': 'search',
+  empty: 'refresh-cw',
+} as const;
+
+const kind = page.emptyKind ?? 'unreachable';
+const title = TITLES[kind] ?? 'No report to show';
+const icon = ICONS[kind as keyof typeof ICONS] ?? 'alert-triangle';
+
+// Every one of these states has the same way forward, because the archive
+// reads a different prefix under a different IAM grant and so survives all of
+// them. Offering it is the difference between a dead end and a detour.
+// The loader's href wins when it has one: on a not-found the report is named
+// by the URL even though it is absent from this listing, so the link can land
+// on that report rather than on the archive index.
+const archiveHref =
+  page.archiveHref ??
+  (page.current ? `/archive/${page.current.season}/${page.current.week}/${page.current.slug}` : '/archive');
+---
+
+<EmptyState framed icon={icon} title={title} description={page.emptyReason ?? undefined}>
+  <div class="dttw-empty__action">
+    <Button variant="secondary" size="sm" as="a" href={archiveHref}>
+      <Icon name="file-text" size={14} /> Open the markdown archive
+    </Button>
+    {/* The operator's half of the message. Kept verbatim and in mono rather
+        than folded into the prose above: it names the prefix and S3's own
+        error code, which is what identifies the grant to widen. */}
+    {page.emptyDetail && <p class="dttw-empty__detail">{page.emptyDetail}</p>}
+  </div>
+</EmptyState>
+
+<style>
+  .dttw-empty__action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+  }
+  .dttw-empty__detail {
+    margin: 0;
+    font: var(--type-data);
+    color: var(--text-disabled);
+    max-width: 60ch;
+    overflow-wrap: anywhere;
+  }
+</style>

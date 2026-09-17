@@ -13,6 +13,20 @@ const { weeks, currentKey, openWeeks = [], surface = 'archive' } = Astro.props a
 
 const urlFor = surface === 'daily' ? dailyUrl : archiveUrl;
 
+/**
+ * On the daily surface a slot with no structured twin may still have a real
+ * markdown report behind it. Those must not render as `pending` or `planned`:
+ * "upstream has not produced this" and "produced, but with no structured
+ * twin" are different facts, and the structured prefix started mid-season, so
+ * the wrong one would be shown for most of the week.
+ *
+ * The archive surface never needs this — its own listing is the complete one.
+ */
+function markdownOnly(slot: MergedSlot): MergedSlot['markdownReport'] {
+  if (surface !== 'daily' || slot.state === 'published') return undefined;
+  return slot.markdownReport;
+}
+
 function rowLabel(slot: MergedSlot): string {
   const siblingCount = weeks.length ? weeks[0].slots.filter((s) => s.day === slot.day).length : 1;
   if (siblingCount > 1 && slot.short) return `${dayLabel(slot.day)} · ${slot.short}`;
@@ -30,11 +44,25 @@ function formatMmDd(iso: string): string {
     <details open={openWeeks.includes(w.week)}>
       <summary class="wkbtn">
         {w.label}
-        <span class="wkcount">{w.slots.filter((s) => s.state === 'published').length}</span>
+        {/* Counts what this surface can actually open, which on the daily
+            sidebar includes the markdown-only rows. */}
+        <span class="wkcount">
+          {w.slots.filter((s) => s.state === 'published' || markdownOnly(s)).length}
+        </span>
       </summary>
       <div class="dttw-index__rows">
         {w.slots.map((slot) =>
-          slot.state === 'published' && slot.report ? (
+          markdownOnly(slot) ? (
+            <a
+              class="ixrow"
+              data-markdown-only="true"
+              href={archiveUrl(markdownOnly(slot)!)}
+              title={`No structured twin — reads from the markdown archive`}
+            >
+              {rowLabel(slot)}
+              <span class="ixdate">markdown only</span>
+            </a>
+          ) : slot.state === 'published' && slot.report ? (
             <a
               class="ixrow"
               href={urlFor(slot.report)}
@@ -83,5 +111,12 @@ function formatMmDd(iso: string): string {
     flex-direction: column;
     gap: 2px;
     padding-top: 2px;
+  }
+
+  /* Reachable, so it reads as a link rather than a disabled placeholder —
+     but muted, because it leaves this surface. */
+  .ixrow[data-markdown-only='true'] .ixdate {
+    color: var(--text-disabled);
+    font-style: italic;
   }
 </style>

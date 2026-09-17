@@ -38,9 +38,29 @@ import { renderReport, type RenderedReport } from './render';
 /** Which report a page wants: the newest, or one addressed by URL. */
 export type Selector = { kind: 'latest' } | { kind: 'slug'; season: number; week: number; slug: string };
 
+/**
+ * Why a page has nothing to render. Distinguishing these is the point: a
+ * denied prefix is a configuration fix, an empty prefix is the data being
+ * honest, and neither should read like the other.
+ */
+export type EmptyKind = 'denied' | 'unreachable' | 'unreadable' | 'empty' | 'not-found';
+
 interface PageBase {
   /** Non-null means render nothing but the empty state. Never a thrown error. */
   emptyReason: string | null;
+  /** Which kind of nothing, for choosing an icon and whether to offer a way out. */
+  emptyKind?: EmptyKind;
+  /** The underlying technical string — the S3 error, verbatim — for whoever has to fix it. Never the whole explanation. */
+  emptyDetail?: string | null;
+  /**
+   * Where to send the reader when this surface has nothing.
+   *
+   * On a `not-found` the report is identified by the URL even though it is
+   * absent from this listing, so the link can point at that exact report in
+   * the archive rather than at the archive index — which is the whole reason
+   * a reader reached a structured URL for a markdown-only report.
+   */
+  archiveHref?: string;
   reports: ReportMeta[];
   current?: ReportMeta;
   weeks: WeekSummary[];
@@ -103,6 +123,26 @@ function reason(err: unknown, fallback: string): string {
 }
 
 /**
+ * Classifies a listing failure so the page can say something true about it.
+ *
+ * `AccessDenied` on `reports-json/` is the one worth calling out by name: the
+ * prefix is listed under its own IAM grant, so it can be denied while
+ * `reports/` and `summaries/` stay readable — which is exactly the shape of
+ * failure that took the site's homepage down while `/archive` kept working.
+ */
+function classify(err: unknown, prefix: string): { kind: EmptyKind; reason: string; detail: string | null } {
+  const detail = err instanceof S3Error ? err.message : null;
+  if (err instanceof S3Error && err.code === 'AccessDenied') {
+    return {
+      kind: 'denied',
+      reason: `The bucket's ${prefix} prefix is not readable with the credentials this site is using, so there is nothing to list. The markdown archive reads a different prefix and is unaffected.`,
+      detail,
+    };
+  }
+  return { kind: 'unreachable', reason: reason(err, 'S3 is unreachable.'), detail };
+}
+
+/**
  * The daily view: one report read from `reports-json/`.
  *
  * The listing is the structured prefix's, so a report with no JSON twin is
@@ -136,7 +176,8 @@ export async function loadDailyPage(
   try {
     reports = await loadReports(env, bypass, 'reports-json');
   } catch (err) {
-    return { ...empty, emptyReason: reason(err, 'S3 is unreachable.') };
+    const { kind, reason: why, detail } = classify(err, 'reports-json/');
+    return { ...empty, emptyReason: why, emptyKind: kind, emptyDetail: detail };
   }
 
   const current = pick(reports, selector);
@@ -145,10 +186,15 @@ export async function loadDailyPage(
       ...empty,
       reports,
       notFound: selector.kind === 'slug',
+      emptyKind: selector.kind === 'slug' ? 'not-found' : 'empty',
+      archiveHref:
+        selector.kind === 'slug'
+          ? `/archive/${selector.season}/${selector.week}/${selector.slug}`
+          : '/archive',
       emptyReason:
         selector.kind === 'slug'
-          ? 'No structured report matches this URL. It may exist in the markdown archive.'
-          : 'No structured reports were found in the bucket.',
+          ? 'No structured report matches this URL — most likely a report that predates the structured prefix, which has no twin and no backfill. The markdown archive is where it lives.'
+          : 'No structured reports were found in the bucket. Reports rendered before the structured prefix existed have no twin, and there is no backfill — those are in the markdown archive.',
     };
   }
 
@@ -160,7 +206,8 @@ export async function loadDailyPage(
       ...empty,
       reports,
       current,
-      emptyReason: 'This report’s structured form could not be read. The markdown archive still has it.',
+      emptyKind: 'unreadable',
+      emptyReason: 'This report’s structured form could not be read — the listing found the object but its contents did not parse, or its schema version is one this build does not understand. The markdown archive still has it.',
     };
   }
 
@@ -182,7 +229,22 @@ export async function loadDailyPage(
     }
   }
 
-  const weeks = buildWeekSummaries(reports, new Date(), weekWindowSeed(envelope));
+  // The markdown listing, purely to annotate slots the structured listing
+  // could not fill. Best-effort: this prefix has its own IAM grant and its
+  // own 300s cache entry, and losing it costs the sidebar its "markdown only"
+  // rows, never the page. Deliberately *after* the envelope loaded, so a
+  // denied `reports/` can never take down a working daily view.
+  let markdownReports: ReportMeta[] = [];
+  try {
+    markdownReports = await loadReports(env, bypass, 'reports');
+  } catch {
+    markdownReports = [];
+  }
+
+  const weeks = buildWeekSummaries(reports, new Date(), {
+    seedWindows: weekWindowSeed(envelope),
+    fallbackReports: markdownReports,
+  });
   const currentWeek = weeks.find((w) => w.season === current.season && w.week === current.week);
   const currentSlot = currentWeek?.slots.find((s) => s.report?.key === current.key);
 
@@ -240,7 +302,8 @@ export async function loadArchivePage(
     reports = await loadReports(env, bypass, 'reports');
     reports = await attachDatelines(env, reports, bypass);
   } catch (err) {
-    return { ...empty, emptyReason: reason(err, 'S3 is unreachable.') };
+    const { kind, reason: why, detail } = classify(err, 'reports/');
+    return { ...empty, emptyReason: why, emptyKind: kind, emptyDetail: detail };
   }
 
   const current = pick(reports, selector);
@@ -249,6 +312,7 @@ export async function loadArchivePage(
       ...empty,
       reports,
       notFound: selector.kind === 'slug',
+      emptyKind: selector.kind === 'slug' ? 'not-found' : 'empty',
       emptyReason:
         selector.kind === 'slug'
           ? 'No report matches this URL.'

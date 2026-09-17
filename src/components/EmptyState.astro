@@ -33,6 +33,10 @@ const {
   )}
   <p class="dttw-empty__title">{title}</p>
   {description && <p class="dttw-empty__reason">{description}</p>}
+  {/* Action slot, matching the design system's EmptyState `action` prop —
+      a placeholder that names a way forward beats one that only names the
+      problem. Renders nothing when no caller fills it. */}
+  <slot />
 </div>
 
 <style>
@@ -83,5 +87,10 @@ const {
   /* `gap` already spaces the framed variant; the margin would double it. */
   .dttw-empty--framed .dttw-empty__title {
     margin: 0;
+  }
+
+  /* The unframed variant has no flex gap to space an action against. */
+  .dttw-empty:not(.dttw-empty--framed) :global(.dttw-empty__action) {
+    margin-top: var(--space-5);
   }
 </style>
