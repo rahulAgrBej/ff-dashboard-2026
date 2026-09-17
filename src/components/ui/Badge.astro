@@ -1,6 +1,6 @@
 ---
 export interface Props {
-  tone?: 'neutral' | 'alert';
+  tone?: 'neutral' | 'alert' | 'positive';
 }
 
 const { tone = 'neutral' } = Astro.props as Props;
@@ -26,5 +26,12 @@ const { tone = 'neutral' } = Astro.props as Props;
   .dttw-badge--alert {
     background: color-mix(in srgb, var(--alert-text) 12%, white);
     color: var(--alert-text);
+  }
+  /* Uses the design system's own positive ramp rather than a color-mix of a
+     text colour, which is what the alert tone above had to do before the
+     status families were available. */
+  .dttw-badge--positive {
+    background: var(--pos-bg);
+    color: var(--pos-text);
   }
 </style>

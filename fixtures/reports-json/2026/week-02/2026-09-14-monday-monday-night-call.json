@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "season": 2026,
+  "week": 2,
+  "day": "monday",
+  "day_label": "monday",
+  "slug": "monday-night-call",
+  "stem": "2026-09-14-monday-monday-night-call",
+  "generated_at": "2026-09-14T21:18:04-04:00",
+  "header": {
+    "title": "Monday night call -- 2026 week 1",
+    "covers": "week 1's Monday night window",
+    "week": 2,
+    "week_window": {
+      "start": "2026-09-08T03:00:00-04:00",
+      "end": "2026-09-15T03:00:00-04:00",
+      "display": "Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET"
+    },
+    "rendered_at": 1757903460.0,
+    "rendered_display": "Mon 2026-09-14 22:41 ET"
+  },
+  "sections": [
+    {
+      "id": "freshness",
+      "heading": "Freshness",
+      "level": 2,
+      "kind": "freshness",
+      "feeds": [
+        {
+          "feed": "sleeper",
+          "at": 1757810000.0,
+          "at_display": "2026-09-13 20:33:20 ET",
+          "stale": false
+        },
+        {
+          "feed": "nflverse",
+          "at": null,
+          "at_display": "never",
+          "stale": true
+        },
+        {
+          "feed": "espn",
+          "at": 1757800000.0,
+          "at_display": "2026-09-13 17:46:40 ET",
+          "stale": false
+        },
+        {
+          "feed": "odds",
+          "at": 1757790000.0,
+          "at_display": "2026-09-13 15:00:00 ET",
+          "stale": false
+        }
+      ],
+      "notes": []
+    },
+    {
+      "id": "tonights-game",
+      "heading": "Tonight's game",
+      "level": 2,
+      "kind": "prose",
+      "body": [
+        "One starter is still live in the Monday night window."
+      ],
+      "data": {
+        "players_live": 1,
+        "minutes_to_kickoff": null
+      }
+    },
+    {
+      "id": "live-margin",
+      "heading": "Live margin",
+      "level": 2,
+      "kind": "table",
+      "columns": [
+        {
+          "key": "team",
+          "label": "team",
+          "type": "string"
+        },
+        {
+          "key": "projected",
+          "label": "projected",
+          "type": "number"
+        },
+        {
+          "key": "live",
+          "label": "live",
+          "type": "number"
+        }
+      ],
+      "rows": [
+        {
+          "team": "Cortical Homunculus",
+          "projected": 112.6,
+          "live": 98.1
+        },
+        {
+          "team": "Team Fitz",
+          "projected": 108.2,
+          "live": null
+        }
+      ],
+      "notes": [
+        "*A null live total means that team has no player still on the field.*"
+      ]
+    },
+    {
+      "id": "cannot-see",
+      "heading": "What this report cannot see",
+      "level": 2,
+      "kind": "list",
+      "items": [
+        "Snap counts for games still in progress.",
+        "Any transaction filed after the listing above was taken.",
+        "Beat-reporter reporting that never reached a feed."
+      ]
+    }
+  ],
+  "markdown": "# Monday night call -- 2026 week 2\n\n**Covers** Mon 2026-09-21 -- week 2's Monday-night game\n**Week 2** Tue 2026-09-15 03:00 - Tue 2026-09-22 03:00 ET\n**Rendered** Mon 2026-09-14 20:45 ET\n\n## Freshness\n- sleeper: 2026-09-14 04:14:28\n- nflverse: 2026-09-14 17:24:07\n- espn: 2026-09-14 18:10:04\n\n## Tonight's game\n- NYG @ LAR, 20:15 ET\n\n## Live margin\n**insufficient data** -- both sides read 0.0 -- the ESPN refresh likely has not landed\n\n## Who is left\n- (ours) Cam Skattebo -- RB NYG\n- (ours) Malik Nabers -- WR NYG\n- (opponent) Kyren Williams -- RB LAR\n- (opponent) Davante Adams -- WR LAR\n\n## Availability\n- Cam Skattebo: tier=insufficient data (ESPN=ACTIVE, Sleeper=CLEAR, nflverse=None)\n- Malik Nabers: tier=insufficient data (ESPN=ACTIVE, Sleeper=CLEAR, nflverse=None)\n\n## What this report cannot see\n- Official inactives drop roughly 90 minutes before kickoff, in no feed this pipeline touches.\n- Whether an unowned player can be added on a Monday is a league waiver setting recorded in no artifact here.\n",
+  "markdown_sha256": "d3bb0dacf4bfea4f05dbe0b258a494124f69aa35c93aa6191f87ef62df5b9b2e",
+  "related": {
+    "markdown_path": "reports/2026/week-02/2026-09-14-monday-monday-night-call.md",
+    "summary_path": "summaries/2026/week-02/2026-09-14-monday-monday-night-call.json"
+  },
+  "_fixture_note": "HAND-AUTHORED from the JSON handoff spec, not an object pulled from the bucket. It exists so the structured view can be exercised under USE_FIXTURES=1, and is shaped to hit the states real data will not reliably cover: a null and a real 0.0 in one column, a freshness array missing `odds`, a `blocks` section with both a named and a heading:null child, and an `insufficient` section. `markdown` and `markdown_sha256` ARE real -- the markdown is the exact bytes of the .md beside it and the digest is its true SHA-256. Replace with real objects when they are available."
+}

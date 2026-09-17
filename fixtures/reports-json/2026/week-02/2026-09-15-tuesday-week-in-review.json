@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "season": 2026,
+  "week": 2,
+  "day": "tuesday",
+  "day_label": "tuesday",
+  "slug": "week-in-review",
+  "stem": "2026-09-15-tuesday-week-in-review",
+  "generated_at": "2026-09-15T21:18:04-04:00",
+  "header": {
+    "title": "Week in review -- 2026 week 1",
+    "covers": "week 1's results",
+    "week": 2,
+    "week_window": {
+      "start": "2026-09-08T03:00:00-04:00",
+      "end": "2026-09-15T03:00:00-04:00",
+      "display": "Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET"
+    },
+    "rendered_at": 1757945040.0,
+    "rendered_display": "Tue 2026-09-15 10:04 ET"
+  },
+  "sections": [
+    {
+      "id": "freshness",
+      "heading": "Freshness",
+      "level": 2,
+      "kind": "freshness",
+      "feeds": [
+        {
+          "feed": "sleeper",
+          "at": 1757900000.0,
+          "at_display": "2026-09-14 17:33:20 ET",
+          "stale": false
+        },
+        {
+          "feed": "nflverse",
+          "at": 1757890000.0,
+          "at_display": "2026-09-14 14:46:40 ET",
+          "stale": false
+        },
+        {
+          "feed": "espn",
+          "at": 1757880000.0,
+          "at_display": "2026-09-14 12:00:00 ET",
+          "stale": false
+        },
+        {
+          "feed": "odds",
+          "at": 1757870000.0,
+          "at_display": "2026-09-14 09:13:20 ET",
+          "stale": true
+        }
+      ],
+      "notes": []
+    },
+    {
+      "id": "result",
+      "heading": "Result",
+      "level": 2,
+      "kind": "prose",
+      "body": [
+        "Won 118.4 to 96.2.",
+        "The margin never fell inside a single-player swing."
+      ],
+      "data": {
+        "points_for": 118.4,
+        "points_against": 96.2
+      }
+    },
+    {
+      "id": "standings",
+      "heading": "Standings",
+      "level": 2,
+      "kind": "table",
+      "columns": [
+        {
+          "key": "team",
+          "label": "team",
+          "type": "string"
+        },
+        {
+          "key": "record",
+          "label": "record",
+          "type": "string"
+        },
+        {
+          "key": "points_for",
+          "label": "points for",
+          "type": "number"
+        }
+      ],
+      "rows": [
+        {
+          "team": "Cortical Homunculus",
+          "record": "1-0",
+          "points_for": 118.4
+        },
+        {
+          "team": "Team Fitz",
+          "record": "1-0",
+          "points_for": 104.9
+        },
+        {
+          "team": "Waiver Wire Warriors",
+          "record": "0-1",
+          "points_for": 96.2
+        }
+      ],
+      "notes": []
+    },
+    {
+      "id": "optimal-lineup-regret",
+      "heading": "Optimal lineup regret",
+      "level": 2,
+      "kind": "insufficient",
+      "reason": "the week-1 bench projection snapshot was never written, so no counterfactual can be computed"
+    },
+    {
+      "id": "cannot-see",
+      "heading": "What this report cannot see",
+      "level": 2,
+      "kind": "list",
+      "items": [
+        "Snap counts for games still in progress.",
+        "Any transaction filed after the listing above was taken.",
+        "Beat-reporter reporting that never reached a feed."
+      ]
+    }
+  ],
+  "markdown": "# Week in review -- 2026 week 1\n\n**Covers** week 1's results\n**Week 1** Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET\n**Rendered** Tue 2026-09-15 20:12 ET\n\n## Freshness\n- sleeper: 2026-09-08 08:11:02\n- nflverse: 2026-09-08 09:23:44\n- espn: 2026-09-08 09:08:19\n\n## Last week's result\n- Final: 118.4 -- 96.2, win, closed out at 09:08 ET refresh.\n- Record moves to 1-0, playoff seed 3.\n\n## Starter vs. bench regret\n- Flex started Devin Singletary (6.1) over bench Ronnie Rivers (0.0) -- no regret.\n- Started Team A's TE over bench WR who scored 14.2 more -- largest gap of the week.\n\n| slot | started | pts | best bench | pts | gap |\n|---|---|---|---|---|---|\n| RB/WR | Rhamondre Stevenson | 12.0 | Chuba Hubbard | 22.2 | 10.2 |\n| RB | Cam Skattebo | 14.1 | Chuba Hubbard | 22.2 | 8.1 |\n\n## What this report cannot see\n- The regret table is retrospective only and is not a start/sit rule for the coming week.\n- Snap share and target share are not readable yet -- nflverse `provisional` is still `true` until Tuesday/Wednesday corrections land.\n",
+  "markdown_sha256": "80b066f24cbff77ac3aa7d8555c3edf69a2d290150f3f34f8187b86ec9f223ca",
+  "related": {
+    "markdown_path": "reports/2026/week-02/2026-09-15-tuesday-week-in-review.md",
+    "summary_path": "summaries/2026/week-02/2026-09-15-tuesday-week-in-review.json"
+  },
+  "_fixture_note": "HAND-AUTHORED from the JSON handoff spec, not an object pulled from the bucket. It exists so the structured view can be exercised under USE_FIXTURES=1, and is shaped to hit the states real data will not reliably cover: a null and a real 0.0 in one column, a freshness array missing `odds`, a `blocks` section with both a named and a heading:null child, and an `insufficient` section. `markdown` and `markdown_sha256` ARE real -- the markdown is the exact bytes of the .md beside it and the digest is its true SHA-256. Replace with real objects when they are available."
+}

@@ -1,0 +1,47 @@
+---
+import Card from '../ui/Card.astro';
+import ReportIndex from '../ReportIndex.astro';
+import type { DailyPage } from '../../lib/page';
+
+export interface Props {
+  page: DailyPage;
+}
+const { page } = Astro.props as Props;
+
+const news = page.rosterNews;
+const sectionCount = page.envelope?.sections.length ?? 0;
+---
+
+<Card title="Reports" subtitle="By week · structured only" padding="tight">
+  <ReportIndex
+    weeks={page.weeks}
+    currentKey={page.current?.key}
+    openWeeks={page.currentWeek ? [page.currentWeek.week] : []}
+    surface="daily"
+  />
+</Card>
+
+<Card title="On this day" padding="tight">
+  <div class="dttw-jump">
+    <a class="ixrow" href="#news">01 · Player news<span class="ixdate">{news ? news.totalCount : '—'}</span></a>
+    <a class="ixrow" href="#summary">02 · AI summary<span class="ixdate">{page.summary ? (page.summary.stale ? 'stale' : 'ok') : '—'}</span></a>
+    <a class="ixrow" href="#report">03 · Daily report<span class="ixdate">{sectionCount}</span></a>
+  </div>
+  <p class="dttw-aside-note">
+    Sections 01 and 02 come from the summary envelope and may lag or be missing entirely.
+    Section 03 always stands alone.
+  </p>
+</Card>
+
+<style>
+  .dttw-jump {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .dttw-aside-note {
+    margin: var(--space-4) 0 0;
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+</style>

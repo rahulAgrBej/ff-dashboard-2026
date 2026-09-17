@@ -22,17 +22,43 @@
   --text-disabled: #9aa1a9;
   --text-link: #2563eb;
 
-  /* Alert */
+  /* Radii — names for the values the components already hardcoded, taken
+     from the design system so new work stops guessing. Identical numbers, so
+     nothing already shipped moves. */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+
+  /* Status families, from the design system's semantic layer.
+     `--alert-text` predates them and is deliberately left at its own value:
+     adopting the system's ramps wholesale would restyle every page that
+     already ships, and the two ambers are close enough to pair. */
   --alert-text: #a35200;
+  --alert-icon: #b96c00;
+  --alert-bg: #fff5e5;
+  --alert-line: #ffe6bf;
+
+  --pos-text: #075c33;
+  --pos-icon: #0b7f47;
+  --pos-bg: #e9f7ef;
+  --pos-line: #cdeedd;
+
+  --neg-text: #7f1c16;
+  --neg-icon: #ac2820;
+  --neg-bg: #fdecea;
+  --neg-line: #f9d4d0;
 
   /* Grey / blue ramp (referenced by the wireframe's inline styles) */
+  --grey-50: #fafbfb;
   --grey-500: #6b7280;
   --grey-900: #17191c;
   --blue-500: #3b82f6;
   --white: #fff;
+  --line-strong: #b9bfc5;
 
   /* Type */
   --type-title-1: 600 28px/1.2 var(--font-sans);
+  --type-title-2: 600 21px/1.33 var(--font-sans);
   --type-title-3: 600 15px/1.35 var(--font-sans);
   --type-body: 400 15px/1.6 var(--font-sans);
   --type-body-sm: 400 13.5px/1.55 var(--font-sans);
@@ -42,6 +68,7 @@
 
   /* Tracking */
   --ls-title-1: -0.02em;
+  --ls-title-2: -0.01em;
   --ls-title-3: -0.01em;
   --ls-label: 0.07em;
 
@@ -64,4 +91,5 @@
   /* Weight */
   --fw-regular: 400;
   --fw-medium: 500;
+  --fw-semibold: 600;
 }

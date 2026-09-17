@@ -1,14 +1,19 @@
 ---
 export interface Props {
   showActions?: boolean;
+  activeTab?: 'daily' | 'archive';
 }
-const { showActions = false } = Astro.props as Props;
+const { showActions = false, activeTab } = Astro.props as Props;
 ---
 
 <header class="dttw-topbar">
   <a href="/" class="dttw-wordmark">
     <span class="dttw-wordmark__full">Down to the Wire<span class="dttw-wordmark__sub"> / Reports</span></span>
   </a>
+  <nav class="dttw-nav" aria-label="Surface">
+    <a class="navtab" href="/" data-on={activeTab === 'daily' ? 'true' : undefined}>Daily</a>
+    <a class="navtab" href="/archive" data-on={activeTab === 'archive' ? 'true' : undefined}>Markdown archive</a>
+  </nav>
   <div class="dttw-topbar__spacer"></div>
   {showActions && (
     <div class="dttw-topbar__actions">
@@ -39,6 +44,34 @@ const { showActions = false } = Astro.props as Props;
   .dttw-wordmark__sub {
     color: var(--text-muted);
     font-weight: var(--fw-regular);
+  }
+  .dttw-nav {
+    display: flex;
+    gap: var(--space-1);
+  }
+  /* The two surfaces read the same reports from different prefixes, so they
+     are peers in the chrome rather than one nested under the other. */
+  .navtab {
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    font: var(--type-body-sm);
+    color: var(--text-secondary);
+    transition: var(--transition-control);
+  }
+  .navtab:hover {
+    background: var(--surface-hover);
+    text-decoration: none;
+    color: var(--text-secondary);
+  }
+  .navtab[data-on='true'] {
+    background: var(--grey-900);
+    color: var(--white);
+    font-weight: var(--fw-medium);
+  }
+  .navtab[data-on='true']:hover {
+    background: var(--grey-900);
+    color: var(--white);
   }
   .dttw-topbar__spacer {
     flex: 1;

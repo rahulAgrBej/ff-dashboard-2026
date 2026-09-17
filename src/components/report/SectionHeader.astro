@@ -1,0 +1,50 @@
+---
+export interface Props {
+  /** Display-only ordinal, e.g. "01". Not an id — the reader's place in the page, not the data's. */
+  num?: string;
+  title: string;
+  subtitle?: string;
+  id?: string;
+}
+const { num, title, subtitle, id } = Astro.props as Props;
+---
+
+<div class="dttw-sechdr">
+  {num && <span class="dttw-sechdr__num">{num}</span>}
+  <h2 class="dttw-sechdr__title" id={id}>{title}</h2>
+  {subtitle && <span class="dttw-sechdr__sub">{subtitle}</span>}
+</div>
+
+<style>
+  .dttw-sechdr {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--line-default);
+    margin-bottom: var(--space-5);
+  }
+  .dttw-sechdr__num {
+    font: var(--type-data);
+    color: var(--text-disabled);
+  }
+  .dttw-sechdr__title {
+    margin: 0;
+    font: var(--type-title-2);
+    letter-spacing: var(--ls-title-2);
+    color: var(--text-primary);
+  }
+  .dttw-sechdr__sub {
+    margin-left: auto;
+    font: var(--type-caption);
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  @media (max-width: 700px) {
+    /* The subtitle is metadata; on a phone it costs more than it tells. */
+    .dttw-sechdr__sub {
+      display: none;
+    }
+  }
+</style>

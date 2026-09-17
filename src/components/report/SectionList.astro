@@ -1,0 +1,31 @@
+---
+import { renderInline } from '../../lib/render';
+import type { ListSection } from '../../lib/reportJson';
+
+export interface Props {
+  section: ListSection;
+}
+const items = Array.isArray(Astro.props.section?.items) ? Astro.props.section.items : [];
+---
+
+{items.length > 0 && (
+  <ul class="dttw-seclist">
+    {items.map((item) => <li set:html={renderInline(item)} />)}
+  </ul>
+)}
+
+<style>
+  .dttw-seclist {
+    margin: 0;
+    padding-left: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .dttw-seclist li {
+    font: var(--type-body);
+    color: var(--text-secondary);
+    max-width: 68ch;
+    text-wrap: pretty;
+  }
+</style>

@@ -1,0 +1,96 @@
+---
+import Card from '../ui/Card.astro';
+import Button from '../ui/Button.astro';
+import Icon from '../ui/Icon.astro';
+import SectionHeader from './SectionHeader.astro';
+import ReportSections from './ReportSections.astro';
+import FreshnessStrip from './FreshnessStrip.astro';
+import SectionList from './SectionList.astro';
+import type { ReportEnvelope } from '../../lib/reportJson';
+import type { SplitSections } from '../../lib/sections';
+
+export interface Props {
+  envelope: ReportEnvelope;
+  sections: SplitSections;
+  /** Where the same report lives as markdown. */
+  markdownHref: string;
+  /** Whether the embedded markdown matches its own digest. Null when it could not be checked. */
+  markdownConsistent: boolean | null;
+}
+const { envelope, sections, markdownHref, markdownConsistent } = Astro.props as Props;
+const count = envelope.sections.length;
+---
+
+<section id="report">
+  <SectionHeader
+    num="03"
+    title="Daily report"
+    subtitle={`${count} ${count === 1 ? 'section' : 'sections'} in render order · stands alone`}
+  />
+
+  <div class="dttw-report">
+    {sections.freshness && (
+      <Card title="Freshness" subtitle="Feed count varies by day — the array is iterated, not indexed">
+        <FreshnessStrip section={sections.freshness} />
+      </Card>
+    )}
+
+    <ReportSections sections={sections.body} />
+
+    {sections.cannotSee && (
+      <Card
+        title={sections.cannotSee.heading ?? 'What this report cannot see'}
+        subtitle="Present in all eight report types"
+      >
+        <SectionList section={sections.cannotSee} />
+      </Card>
+    )}
+
+    <footer class="dttw-report__foot">
+      <span class="mono">{envelope.related?.markdown_path}</span>
+      {/* Deliberately a claim about this object only: the digest says the
+          embedded copy is intact, not that the .md in the bucket still
+          matches it. Verifying that would cost a second fetch and defeat the
+          point of reading the structured form. */}
+      {markdownConsistent === false && (
+        <span class="mono dttw-report__warn">embedded markdown does not match its own digest</span>
+      )}
+      <div class="dttw-report__spacer"></div>
+      <Button variant="secondary" size="sm" as="a" href={markdownHref}>
+        <Icon name="file-text" size={14} /> View markdown
+      </Button>
+      <Button variant="secondary" size="sm" data-action="print">
+        <Icon name="printer" size={14} /> Print
+      </Button>
+    </footer>
+  </div>
+</section>
+
+<style>
+  .dttw-report {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-7);
+  }
+  .dttw-report__foot {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    padding-top: var(--space-5);
+    border-top: var(--border-subtle);
+  }
+  .dttw-report__spacer {
+    flex: 1;
+  }
+  .dttw-report__warn {
+    color: var(--alert-text);
+  }
+
+  @media (max-width: 700px) {
+    .dttw-report__foot .mono {
+      /* The bucket key is long and not actionable on a phone. */
+      display: none;
+    }
+  }
+</style>

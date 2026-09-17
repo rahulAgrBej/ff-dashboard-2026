@@ -1,0 +1,130 @@
+---
+import { formatCell, isNumericColumn } from '../../lib/sections';
+import { renderInline } from '../../lib/render';
+import type { TableSection } from '../../lib/reportJson';
+
+export interface Props {
+  section: TableSection;
+}
+const { section } = Astro.props as Props;
+
+const columns = Array.isArray(section.columns) ? section.columns : [];
+const rows = Array.isArray(section.rows) ? section.rows : [];
+const notes = Array.isArray(section.notes) ? section.notes : [];
+
+// Computed once per table, not per cell: alignment is a property of the
+// column, and `isNumericColumn` walks every row to decide it.
+const numeric = columns.map((column) => isNumericColumn(column, rows));
+---
+
+<div class="dttw-tablewrap">
+  <table class="dttw-tbl">
+    <thead>
+      <tr>
+        {columns.map((column, i) => (
+          <th class:list={[numeric[i] && 'dttw-tbl__num']} scope="col">{column.label}</th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr>
+          {columns.map((column, i) => {
+            const cell = formatCell(row?.[column.key], column.type);
+            return (
+              <td
+                class:list={[numeric[i] && 'dttw-tbl__num', cell.isNull && 'dttw-tbl__null']}
+                data-align={numeric[i] ? undefined : 'left'}
+              >{cell.text}</td>
+            );
+          })}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+{notes.length > 0 &&
+  notes.map((note) => <p class="dttw-tnote" set:html={renderInline(note)} />)}
+
+<style>
+  /* A nine-column waiver table cannot fit the article's measure, so the
+     table scrolls inside its own box rather than widening the page — the
+     same treatment `.md-table` gives markdown tables in global.css. */
+  .dttw-tablewrap {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+  }
+
+  .dttw-tbl {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .dttw-tbl th {
+    font: var(--type-label);
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--line-default);
+    white-space: nowrap;
+  }
+
+  .dttw-tbl td {
+    font: var(--type-body-sm);
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line-subtle);
+  }
+
+  .dttw-tbl tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .dttw-tbl tbody tr:hover td {
+    background: var(--grey-50);
+  }
+
+  /* Numeric columns are mono and right-aligned so magnitudes line up. The
+     declared column `type` alone does not earn this — `isNumericColumn`
+     checks the rows, because the type is unvalidated upstream. */
+  .dttw-tbl__num {
+    font: var(--type-data);
+    color: var(--text-primary);
+    text-align: right;
+  }
+  .dttw-tbl th.dttw-tbl__num {
+    color: var(--text-muted);
+  }
+
+  /* The load-bearing rule of this whole view: a null cell says "no reading"
+     in disabled grey and never renders as 0. A bye week's offense_pct is
+     null; a real 0.0 is a real zero, and the two must not look alike. */
+  .dttw-tbl__null {
+    font: var(--type-data);
+    color: var(--text-disabled);
+  }
+  .dttw-tbl__null[data-align='left'] {
+    text-align: left;
+  }
+
+  /* notes[] keep the report's own phrasing verbatim — there the words are the
+     data, so they sit with the table rather than being summarised away. */
+  .dttw-tnote {
+    font: var(--type-caption);
+    font-style: italic;
+    color: var(--text-muted);
+    margin: 0;
+    padding: 10px 16px;
+    border: 1px solid var(--line-subtle);
+    border-top: none;
+    background: var(--surface-sunken);
+  }
+  .dttw-tnote:last-child {
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+  }
+</style>

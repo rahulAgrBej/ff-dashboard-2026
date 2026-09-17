@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "season": 2026,
+  "week": 2,
+  "day": "tuesday-waivers",
+  "day_label": "tuesday",
+  "slug": "waiver-wire-and-opening-market",
+  "stem": "2026-09-16-tuesday-waiver-wire-and-opening-market",
+  "generated_at": "2026-09-16T21:18:04-04:00",
+  "header": {
+    "title": "Waiver wire and opening market -- 2026 week 2",
+    "covers": "week 2's waiver window; settlements also span week 1",
+    "week": 2,
+    "week_window": {
+      "start": "2026-09-15T03:00:00-04:00",
+      "end": "2026-09-22T03:00:00-04:00",
+      "display": "Tue 2026-09-15 03:00 - Tue 2026-09-22 03:00 ET"
+    },
+    "rendered_at": 1758071884.0,
+    "rendered_display": "Wed 2026-09-16 21:18 ET"
+  },
+  "sections": [
+    {
+      "id": "freshness",
+      "heading": "Freshness",
+      "level": 2,
+      "kind": "freshness",
+      "feeds": [
+        {
+          "feed": "sleeper",
+          "at": 1757990000.0,
+          "at_display": "2026-09-15 18:33:20 ET",
+          "stale": false
+        },
+        {
+          "feed": "nflverse",
+          "at": null,
+          "at_display": "never",
+          "stale": true
+        },
+        {
+          "feed": "espn",
+          "at": 1757980000.0,
+          "at_display": "2026-09-15 15:46:40 ET",
+          "stale": false
+        }
+      ],
+      "notes": [
+        "*odds (pre_lock)* was not snapshotted for this window."
+      ]
+    },
+    {
+      "id": "decisions-due",
+      "heading": "Decisions due",
+      "level": 2,
+      "kind": "prose",
+      "body": [
+        "**Two slots are still open.**",
+        "FLEX and D/ST have no lock this week."
+      ],
+      "emphasis": true,
+      "data": {
+        "held_open": 2,
+        "points_left_on_table": 31.8,
+        "out_starter_count": null
+      }
+    },
+    {
+      "id": "waiver-settlements",
+      "heading": "Waiver settlements",
+      "level": 2,
+      "kind": "table",
+      "columns": [
+        {
+          "key": "player_name",
+          "label": "player",
+          "type": "string"
+        },
+        {
+          "key": "tier",
+          "label": "tier",
+          "type": "string"
+        },
+        {
+          "key": "bid",
+          "label": "bid",
+          "type": "integer"
+        },
+        {
+          "key": "projection",
+          "label": "proj at risk",
+          "type": "number"
+        },
+        {
+          "key": "outcome",
+          "label": "outcome",
+          "type": "string"
+        }
+      ],
+      "rows": [
+        {
+          "player_name": "Caleb Williams",
+          "tier": "probable",
+          "bid": 14,
+          "projection": 17.4,
+          "outcome": "Claimed by us"
+        },
+        {
+          "player_name": "Jaylen Warren",
+          "tier": "questionable",
+          "bid": 8,
+          "projection": 11.2,
+          "outcome": "Claimed by others"
+        },
+        {
+          "player_name": "Tre Tucker",
+          "tier": null,
+          "bid": null,
+          "projection": null,
+          "outcome": "Newly available"
+        },
+        {
+          "player_name": "Roschon Johnson",
+          "tier": "out",
+          "bid": 3,
+          "projection": 0.0,
+          "outcome": "Unclaimed"
+        }
+      ],
+      "notes": [
+        "*Tiers are computed from practice participation, not from ESPN.*"
+      ],
+      "data": {
+        "count": 4
+      }
+    },
+    {
+      "id": "add-candidates",
+      "heading": "Add candidates",
+      "level": 2,
+      "kind": "blocks",
+      "blocks": [
+        {
+          "id": "add-candidates-rows",
+          "heading": "Highest projected",
+          "level": 4,
+          "kind": "table",
+          "columns": [
+            {
+              "key": "player_name",
+              "label": "player",
+              "type": "string"
+            },
+            {
+              "key": "position",
+              "label": "position",
+              "type": "string"
+            },
+            {
+              "key": "roster_pct",
+              "label": "roster %",
+              "type": "number"
+            },
+            {
+              "key": "projection",
+              "label": "proj",
+              "type": "number"
+            }
+          ],
+          "rows": [
+            {
+              "player_name": "Bhayshul Tuten",
+              "position": "RB",
+              "roster_pct": 12.4,
+              "projection": 9.8
+            },
+            {
+              "player_name": "Elic Ayomanor",
+              "position": "WR",
+              "roster_pct": 8.1,
+              "projection": null
+            }
+          ]
+        },
+        {
+          "id": "add-candidates-sources",
+          "heading": null,
+          "level": null,
+          "kind": "table",
+          "columns": [
+            {
+              "key": "source",
+              "label": "source",
+              "type": "string"
+            },
+            {
+              "key": "window",
+              "label": "window",
+              "type": "string"
+            },
+            {
+              "key": "queries",
+              "label": "queries",
+              "type": "integer"
+            }
+          ],
+          "rows": [
+            {
+              "source": "practice participation",
+              "window": "Mon-Wed",
+              "queries": 7
+            },
+            {
+              "source": "depth chart",
+              "window": "week 2",
+              "queries": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "opening-market",
+      "heading": "Opening market",
+      "level": 2,
+      "kind": "insufficient",
+      "reason": "no odds snapshot for this week"
+    },
+    {
+      "id": "cannot-see",
+      "heading": "What this report cannot see",
+      "level": 2,
+      "kind": "list",
+      "items": [
+        "Snap counts for games still in progress.",
+        "Any transaction filed after the listing above was taken.",
+        "Beat-reporter reporting that never reached a feed."
+      ]
+    }
+  ],
+  "markdown": "# Waiver wire and opening market -- 2026 week 2\n\n**Covers** week 2's waiver window; settlements also span week 1 (Tue 2026-09-08 03:00 - Tue 2026-09-15 03:00 ET)\n**Week 2** Tue 2026-09-15 03:00 - Tue 2026-09-22 03:00 ET\n**Rendered** Wed 2026-09-16 09:35 ET\n\n## Freshness\n- sleeper: 2026-09-16 07:42:10\n- espn: 2026-09-16 08:03:55\n- odds: **insufficient data** -- the `slate` job has not produced a snapshot this week\n\n## Waiver settlements\n- Team G won RB #24 off waivers, bid_amount=14, is_pending=False.\n- Team C's claim on WR #81 is still pending.\n\n| rank | team | waiver_rank | ours |\n|---|---|---|---|\n| 1 | Jaxon Smith-Kachigga | 1 |  |\n| 4 | Caleb Williams' Baby Mamas | 4 | <-- |\n| 12 | Cheek clappers | 12 |  |\n\n## Add candidates\n### D/ST\n_insufficient data -- no eligible bench player at this slot to set a floor._\n\n| player | position | pro_team | week_projected | gap | percent_owned | implied_team_total | trending_add | drop |\n|---|---|---|---|---|---|---|---|---|\n| Buccaneers D/ST | D/ST | TB | 8.0 | insufficient data | 12.8 | insufficient data | -- | De'Zhaun Stribling |\n| Bears D/ST | D/ST | CHI | 6.5 | insufficient data | 9.7 | insufficient data | -- | Tre Tucker |\n| 49ers D/ST | D/ST | SF | 6.4 | insufficient data | 7.3 | insufficient data | -- | RJ Harvey |\n\n## Opening market\n- Implied team totals for the coming week: **insufficient data** -- odds layer has never produced data.\n\n## What this report cannot see\n- `player-pool.csv` carries `on_team_id = 0` on every row -- the free-agent pool is a derived anti-join, not a vendor fact.\n- `percent_owned` has no final state; it is a rough signal, not a settled one.\n",
+  "markdown_sha256": "987a347f39acd955313abd90923b4fcc46ad162c77da8736f380a8dcc7e6015c",
+  "related": {
+    "markdown_path": "reports/2026/week-02/2026-09-16-tuesday-waiver-wire-and-opening-market.md",
+    "summary_path": "summaries/2026/week-02/2026-09-16-tuesday-waiver-wire-and-opening-market.json"
+  },
+  "_fixture_note": "HAND-AUTHORED from the JSON handoff spec, not an object pulled from the bucket. It exists so the structured view can be exercised under USE_FIXTURES=1, and is shaped to hit the states real data will not reliably cover: a null and a real 0.0 in one column, a freshness array missing `odds`, a `blocks` section with both a named and a heading:null child, and an `insufficient` section. `markdown` and `markdown_sha256` ARE real -- the markdown is the exact bytes of the .md beside it and the digest is its true SHA-256. Replace with real objects when they are available."
+}

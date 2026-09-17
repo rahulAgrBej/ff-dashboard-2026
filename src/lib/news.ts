@@ -76,9 +76,26 @@ const GROUP_LABELS: Record<string, string> = {
   ir: 'Injured reserve',
 };
 
+/**
+ * What each group was actually asked, in the UI's words.
+ *
+ * The three groups get different questions upstream, and that is why
+ * grouping matters for presentation rather than being cosmetic: a mostly
+ * empty bench is the design working, not a gap, and IR is a status strip
+ * rather than news. Showing the question alongside the answers is what makes
+ * an empty group legible instead of looking broken.
+ */
+const GROUP_ASKS: Record<string, string> = {
+  starters: 'the most recent item before kickoff',
+  bench: 'one line only where something changed',
+  ir: 'designation and return timeline only',
+};
+
 export interface RosterNewsGroup {
   key: string;
   label: string;
+  /** The question this group was asked, or null for a group key this renderer doesn't know. */
+  ask: string | null;
   players: NewsPlayer[];
   foundCount: number;
   totalCount: number;
@@ -86,6 +103,8 @@ export interface RosterNewsGroup {
   skipped: string | null;
   /** False when this group's search never fired. A skipped group has no opinion, hence null. */
   grounded: boolean | null;
+  /** How many distinct sources the API's grounding metadata returned for this group. Zero on an ungrounded group by definition. */
+  sourceCount: number;
 }
 
 export interface RosterNews {
@@ -148,11 +167,13 @@ export function buildRosterNews(news: NewsBlock): RosterNews {
     return {
       key,
       label: GROUP_LABELS[key] ?? key,
+      ask: GROUP_ASKS[key] ?? null,
       players,
       foundCount: players.filter((p) => p.found).length,
       totalCount: players.length,
       skipped: typeof meta.skipped === 'string' ? meta.skipped : null,
       grounded: typeof meta.grounded === 'boolean' ? meta.grounded : null,
+      sourceCount: Array.isArray(meta.sources) ? meta.sources.length : 0,
     };
   });
 

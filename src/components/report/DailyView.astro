@@ -1,0 +1,102 @@
+---
+import DailyHeader from './DailyHeader.astro';
+import SectionHeader from './SectionHeader.astro';
+import StructuredReport from './StructuredReport.astro';
+import RosterNews from '../RosterNews.astro';
+import NewsUnavailable from '../NewsUnavailable.astro';
+import AiSummary from '../AiSummary.astro';
+import EmptyState from '../EmptyState.astro';
+import NextReportNote from '../NextReportNote.astro';
+import { archiveUrl } from '../../lib/reports';
+import { collectSources, formatNewsTimestamp } from '../../lib/news';
+import { formatSummaryTimestamp } from '../../lib/summaries';
+import { renderSummary } from '../../lib/render';
+import type { DailyPage } from '../../lib/page';
+
+export interface Props {
+  page: DailyPage;
+}
+const { page } = Astro.props as Props;
+
+// Narrowed once. A DailyPage with no emptyReason always carries these.
+const envelope = page.envelope!;
+const sections = page.sections!;
+const current = page.current!;
+
+const news = page.rosterNews;
+const block = page.newsBlock;
+
+// Three distinct states, and they are not interchangeable. `news` present is
+// the layer working; `news_error` is a failure that will be backfilled; and
+// neither present means the summariser has not run this layer at all.
+const newsSearched = news && block ? formatNewsTimestamp(block.generated_at) : null;
+---
+
+<DailyHeader envelope={envelope} eyebrowSuffix={page.isLatest ? undefined : 'earlier report'} />
+
+<section id="news">
+  <SectionHeader
+    num="01"
+    title="Latest player news"
+    subtitle={
+      news && newsSearched
+        ? `${news.totalCount} roster ${news.totalCount === 1 ? 'row' : 'rows'} · searched ${newsSearched}`
+        : 'Searched live — independent of the report below'
+    }
+  />
+  {news && block ? (
+    <RosterNews
+      news={news}
+      sources={collectSources(block)}
+      model={block.model}
+      generatedAt={formatNewsTimestamp(block.generated_at)}
+      grounded={block.grounded !== false}
+      searchQueryCount={block.search_query_count ?? 0}
+      rosterExport={block.roster_export}
+      rosterWeek={block.roster_week}
+    />
+  ) : page.newsError ? (
+    <NewsUnavailable reason={page.newsError} />
+  ) : (
+    <EmptyState
+      framed
+      compact
+      icon="search"
+      title="No news layer on this report"
+      description="Grounded search runs with the summary, hours after the report. Nothing has been written for this one yet."
+    />
+  )}
+</section>
+
+<section id="summary">
+  <SectionHeader num="02" title="AI summary" subtitle="A separate layer · never merged with the news above" />
+  {page.summary ? (
+    <AiSummary
+      html={renderSummary(page.summary.summary_markdown)}
+      model={page.summary.model}
+      generatedAt={formatSummaryTimestamp(page.summary.generated_at)}
+      stale={page.summary.stale}
+      priorReports={page.summary.prior_reports?.length ?? 0}
+    />
+  ) : (
+    /* `related.summary_path` names where a summary will land if one is
+       produced — it is not a claim that it exists. The summariser trails the
+       report by hours and may never run, so this is a wait, not a failure. */
+    <EmptyState
+      framed
+      compact
+      icon="refresh-cw"
+      title="Summary not yet available"
+      description="The summariser runs hours after the report. The report below stands alone and needs nothing from this section."
+    />
+  )}
+</section>
+
+<StructuredReport
+  envelope={envelope}
+  sections={sections}
+  markdownHref={archiveUrl(current)}
+  markdownConsistent={page.markdownConsistent}
+/>
+
+<NextReportNote nextSlot={page.upcoming} />

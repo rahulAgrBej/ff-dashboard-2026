@@ -1,0 +1,75 @@
+---
+import Badge from '../ui/Badge.astro';
+import { renderInline } from '../../lib/render';
+import type { FreshnessSection } from '../../lib/reportJson';
+
+export interface Props {
+  section: FreshnessSection;
+}
+const { section } = Astro.props as Props;
+
+// Iterated, never indexed: the feed list varies by day — Saturday's report
+// drops `odds` entirely — and a fifth line (`odds (pre_lock)`) arrives on
+// Sunday through `notes[]` rather than as a feed.
+const feeds = Array.isArray(section.feeds) ? section.feeds : [];
+const notes = Array.isArray(section.notes) ? section.notes : [];
+---
+
+<div class="dttw-freshness">
+  <div class="dttw-freshness__strip">
+    {feeds.map((feed) => (
+      <div class="dttw-feed" data-stale={feed.stale ? 'true' : 'false'}>
+        <span class="dttw-feed__name">{feed.feed}</span>
+        <span class="dttw-feed__at">{feed.at_display}</span>
+        {feed.stale && <Badge tone="alert">Stale</Badge>}
+      </div>
+    ))}
+  </div>
+  {notes.length > 0 && (
+    <ul class="dttw-freshness__notes">
+      {notes.map((note) => <li set:html={renderInline(note)} />)}
+    </ul>
+  )}
+</div>
+
+<style>
+  .dttw-freshness__strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .dttw-feed {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 6px 10px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--surface-page);
+  }
+  /* Staleness is the whole point of the strip, so it is carried by the
+     container rather than by the badge alone. */
+  .dttw-feed[data-stale='true'] {
+    border-color: var(--alert-line);
+    background: var(--alert-bg);
+  }
+  .dttw-feed__name {
+    font: var(--type-data);
+    color: var(--text-primary);
+  }
+  .dttw-feed__at {
+    font: var(--type-data);
+    color: var(--text-muted);
+  }
+  .dttw-freshness__notes {
+    margin: var(--space-4) 0 0;
+    padding-left: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .dttw-freshness__notes li {
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+</style>

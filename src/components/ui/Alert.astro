@@ -1,0 +1,92 @@
+---
+import Icon from './Icon.astro';
+import type { Props as IconProps } from './Icon.astro';
+
+export interface Props {
+  tone?: 'neutral' | 'alert' | 'negative' | 'positive';
+  title?: string;
+  icon?: IconProps['name'];
+}
+
+const { tone = 'alert', title, icon } = Astro.props as Props;
+---
+
+<div class:list={['dttw-alert', `dttw-alert--${tone}`]} role="status">
+  {icon && (
+    <span class="dttw-alert__icon">
+      <Icon name={icon} size={16} />
+    </span>
+  )}
+  <div class="dttw-alert__body">
+    {title && <div class="dttw-alert__title">{title}</div>}
+    <div class="dttw-alert__text"><slot /></div>
+  </div>
+</div>
+
+<style>
+  /* Ported from the design system's Alert. Outline-and-tint rather than a
+     shadow, matching its "near-flat by design" elevation rule. */
+  .dttw-alert {
+    display: flex;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-sm);
+    border: 1px solid;
+  }
+
+  .dttw-alert__icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    margin-top: 1px;
+  }
+
+  .dttw-alert__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dttw-alert__title {
+    font: var(--type-body-sm);
+    font-weight: var(--fw-semibold);
+  }
+
+  .dttw-alert__text {
+    font: var(--type-body-sm);
+    color: var(--text-secondary);
+    text-wrap: pretty;
+  }
+
+  /* An alert with a title indents its body under it; one without is a single
+     line and needs no offset. */
+  .dttw-alert__title + .dttw-alert__text {
+    margin-top: 2px;
+  }
+
+  .dttw-alert--alert {
+    background: var(--alert-bg);
+    border-color: var(--alert-line);
+  }
+  .dttw-alert--alert .dttw-alert__title { color: var(--alert-text); }
+  .dttw-alert--alert .dttw-alert__icon { color: var(--alert-icon); }
+
+  .dttw-alert--negative {
+    background: var(--neg-bg);
+    border-color: var(--neg-line);
+  }
+  .dttw-alert--negative .dttw-alert__title { color: var(--neg-text); }
+  .dttw-alert--negative .dttw-alert__icon { color: var(--neg-icon); }
+
+  .dttw-alert--positive {
+    background: var(--pos-bg);
+    border-color: var(--pos-line);
+  }
+  .dttw-alert--positive .dttw-alert__title { color: var(--pos-text); }
+  .dttw-alert--positive .dttw-alert__icon { color: var(--pos-icon); }
+
+  .dttw-alert--neutral {
+    background: var(--surface-sunken);
+    border-color: var(--line-subtle);
+  }
+  .dttw-alert--neutral .dttw-alert__title { color: var(--text-secondary); }
+  .dttw-alert--neutral .dttw-alert__icon { color: var(--text-muted); }
+</style>

@@ -1,0 +1,52 @@
+---
+import { dataChips } from '../../lib/sections';
+import type { Section } from '../../lib/reportJson';
+
+export interface Props {
+  section: Section;
+}
+const chips = dataChips(Astro.props.section as Section);
+---
+
+{chips.length > 0 && (
+  <div class="dttw-chips">
+    {chips.map((chip) => (
+      <span class="dttw-chip" data-null={chip.cell.isNull ? 'true' : undefined}>
+        <b>{chip.cell.text}</b>
+        <span>{chip.key}</span>
+      </span>
+    ))}
+  </div>
+)}
+
+<style>
+  .dttw-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .dttw-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    padding: 4px 9px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-xs);
+    background: var(--surface-sunken);
+  }
+  .dttw-chip b {
+    font: var(--type-data);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+  }
+  /* A figure that could not be computed is shown, not dropped — but it must
+     not read as a measurement. */
+  .dttw-chip[data-null='true'] b {
+    color: var(--text-disabled);
+    font-weight: var(--fw-regular);
+  }
+  .dttw-chip span {
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+</style>

@@ -72,12 +72,21 @@ const SUPPORTED_SCHEMA_VERSIONS: ReadonlySet<number> = new Set([1, 2]);
  * silently build a summary key out of something else.
  */
 export function summaryKeyFor(reportKey: string): string | null {
-  if (!reportKey.startsWith('reports/') || !reportKey.endsWith('.md')) return null;
-  return `summaries/${reportKey.slice('reports/'.length, -'.md'.length)}.json`;
+  if (reportKey.startsWith('reports/') && reportKey.endsWith('.md')) {
+    return `summaries/${reportKey.slice('reports/'.length, -'.md'.length)}.json`;
+  }
+  // The structured prefix mirrors the same tree, so a report addressed from
+  // `reports-json/` resolves its summary by the same swap. Without this the
+  // daily view would silently never find a summary: its report keys carry
+  // the other prefix and the check above would reject every one of them.
+  if (reportKey.startsWith('reports-json/') && reportKey.endsWith('.json')) {
+    return `summaries/${reportKey.slice('reports-json/'.length, -'.json'.length)}.json`;
+  }
+  return null;
 }
 
-/** Hex SHA-256, matching the pipeline's `_sha256` over the report's full markdown text. */
-async function sha256Hex(text: string): Promise<string> {
+/** Hex SHA-256, matching the pipeline's `_sha256` over the report's full markdown text. Exported so the structured view can check an envelope's embedded `markdown` against its own `markdown_sha256` with the same primitive. */
+export async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))

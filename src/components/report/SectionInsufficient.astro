@@ -1,0 +1,51 @@
+---
+import Icon from '../ui/Icon.astro';
+import type { InsufficientSection } from '../../lib/reportJson';
+
+export interface Props {
+  section: InsufficientSection;
+}
+const { section } = Astro.props as Props;
+---
+
+<div class="dttw-insuff">
+  <span class="dttw-insuff__icon"><Icon name="alert-triangle" size={18} /></span>
+  <div>
+    <p class="dttw-insuff__title">Could not be computed</p>
+    {section.reason && <p class="dttw-insuff__reason">{section.reason}</p>}
+  </div>
+</div>
+
+<style>
+  /* A first-class state, not an empty table — hence a dashed container that
+     reads as "absent by measurement", and the `reason` shown rather than
+     swallowed. The same section id can arrive as a real table on another day,
+     so this treatment has to be unmistakable. */
+  .dttw-insuff {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    border: 1px dashed var(--line-default);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+    padding: var(--space-5) var(--space-5);
+  }
+  .dttw-insuff__icon {
+    display: inline-flex;
+    color: var(--alert-icon);
+    flex: 0 0 auto;
+  }
+  .dttw-insuff__title {
+    margin: 0;
+    font: var(--type-body);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+  }
+  .dttw-insuff__reason {
+    margin: var(--space-2) 0 0;
+    font: var(--type-body-sm);
+    color: var(--text-secondary);
+    max-width: 68ch;
+    text-wrap: pretty;
+  }
+</style>

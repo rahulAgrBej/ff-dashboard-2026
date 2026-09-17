@@ -1,18 +1,102 @@
 # Down to the Wire — reports
 
-Read surface for the reports produced by [`espn-fantasy-football-sandbox`](https://github.com/rahulAgrBej/espn-fantasy-football-sandbox). Astro (SSR) on Cloudflare Workers, fetching Markdown reports from a private S3 bucket at request time — no build step or webhook needed to publish a new report.
+Read surface for the reports produced by [`espn-fantasy-football-sandbox`](https://github.com/rahulAgrBej/espn-fantasy-football-sandbox). Astro (SSR) on Cloudflare Workers, reading a private S3 bucket at request time — no build step or webhook needed to publish a new report.
 
 ## How it fits together
 
 ```
 browser → Cloudflare Worker (Astro SSR)
             ├─ Cache API  (listing 300s / bodies immutable-by-etag)
-            └─ aws4fetch SigV4 → s3://espn-ff-data-2026/{reports,summaries}/**
+            └─ aws4fetch SigV4 → s3://espn-ff-data-2026/{reports,reports-json,summaries}/**
 ```
 
-One object per report under each prefix. The `summaries/` envelope carries two independent AI layers — the summary, and the grounded roster news — at one key.
+One object per report under each of three prefixes, all sharing one
+`<season>/week-NN/<stem>` path, so any one of them addresses the other two by
+string swap with no lookup table:
 
-The upstream repo is never modified. The Worker reads `reports/<season>/week-<NN>/<date>-<day>-<slug>.md` out of the bucket on every request, listing once per 300s and caching each rendered report body forever under a key that includes its S3 ETag — so a same-day re-run of a report (which upstream explicitly tolerates) is served correctly with no purge logic anywhere.
+| prefix | what it holds | completeness |
+|---|---|---|
+| `reports/` | the rendered markdown | complete |
+| `reports-json/` | the same report as structured data | **starts mid-season** |
+| `summaries/` | the AI summary envelope, carrying two independent layers | lags each report by hours; may never appear |
+
+### Two read surfaces
+
+**Daily (`/`, `/r/<season>/<week>/<slug>`)** is the homepage, and it reads
+`reports-json/`. The envelope is a strict superset of the markdown beside it —
+typed table rows, section kinds, a real `stale` boolean per feed, and the
+counts the prose states only inside a sentence — so this surface needs none of
+the markdown parsing below. Three things it can express that markdown could
+not: `insufficient` as a state rather than a string sentinel, `null` as
+distinct from zero in a table cell, and the week window as a raw value rather
+than a display string.
+
+**Markdown archive (`/archive`, `/archive/<season>/<week>/<slug>`)** is the
+original pipeline, unchanged. It is not a fallback: `reports-json/` began
+mid-season, upstream has no command to backfill it, and so the earliest
+reports exist under `reports/` **alone**. Those are absent from the Daily
+index by construction — its listing is the structured prefix's — and the
+archive is the only place they can be read. Each archive report links into the
+structured view only when a twin is actually in the listing, never on the key
+swap alone, so the link can't lead to a 404.
+
+Both surfaces key their URLs on `(season, week, slug)` and never on `stem`: a
+stem embeds the filename date, and upstream re-running a report writes a new
+date onto the same slot, so a stem-keyed URL would move under exactly the case
+`dedupeRenders` exists to collapse. `/reports/**` 301s to `/archive/**` — the
+identity behind those URLs is unchanged, so it is a pure path rewrite.
+
+The upstream repo is never modified. The Worker reads
+`reports/<season>/week-<NN>/<date>-<day>-<slug>.md` (and its
+`reports-json/…​.json` twin) out of the bucket on every request, listing each
+prefix once per 300s under its own cache key and caching each body forever
+under a key that includes its S3 ETag — so a same-day re-run of a report
+(which upstream explicitly tolerates) is served correctly with no purge logic
+anywhere.
+
+### Structured reports
+
+`src/lib/reportJson.ts` types the envelope and loads it exactly as
+`summaries.ts` loads a summary: list the prefix, look the key up in the map,
+never throw. A report with no structured twin is a map miss rather than a 404
+on every render. `schema_version` is a **set** of supported versions from the
+outset — the same field was a scalar pinned to `1` in `summaries.ts` and
+silently dropped every envelope the pipeline wrote after the news layer
+shipped.
+
+`src/lib/sections.ts` holds the display rules the contract is strict about:
+
+- **Route on `id`, display `heading`.** Section ids are fixed strings. Two
+  report types build their headings at render time — Saturday's `## Tier
+  changes since <date>` and Thursday's `## Canonical usage -- week N` — so a
+  consumer matching on heading text breaks on Saturday every day and on
+  Thursday every week.
+- **Switch on `kind`, never on presence.** Most ids can arrive as a `table`, a
+  `prose`, a `blocks` *or* an `insufficient` for the same id, depending on
+  whether the inputs were there.
+- **`null` means "no reading", and it is never zero.** The markdown had three
+  separate vocabularies for missing data (`insufficient data`, `--`, an em
+  dash) and all three are `null` here. A bye week's `offense_pct` is null, not
+  `0.0`; a count that could not be computed is null, never `0`. "No starters
+  are out" and "we could not find out" are opposite answers, so a null cell
+  renders as `no reading` in disabled grey and a real zero renders as a
+  number.
+
+Two digests are checked, and neither costs a request. The summary's
+`report.sha256` is compared against the envelope's **embedded** `markdown` —
+the same bytes the summariser hashed — so the staleness badge works on the
+Daily surface with no markdown fetch at all. `markdown_sha256` is compared
+against that same embedded copy, which is an internal-consistency check on one
+object and deliberately **not** a claim that the `.md` in the bucket still
+matches; verifying that would cost a second fetch and defeat the point of
+reading the structured form.
+
+Because `header` carries the covered range, the render time and the week
+window, the Daily surface skips `attachDatelines` entirely — the markdown
+surface's fan-out of up to 12 body fetches per request, which exists only
+because the covered date lives inside each markdown body. One envelope's
+`week_window` seeds `weekDateRange`, which extrapolates every other week in
+the season from it, so one object labels the whole sidebar.
 
 ### AI summaries
 
@@ -37,6 +121,7 @@ Three upstream guarantees shape how this renders:
 - **Every rostered player appears.** Upstream reconciles the model's answer against the roster it was given, materialising anyone the model skipped with `found: false` and a note. "We looked and found nothing" and "the model never answered" are different findings, and neither may render as a finding — so every player is shown, and only the visual weight differs.
 - **`grounded: false` is the layer working, not failing.** It means the search tool never fired and those items came from model recall — roughly one call in four upstream. The card carries an alert badge and an explicit warning rather than hiding it, because it is the one failure nobody can detect by reading the text.
 - **News is never a lineup call.** Its house rules forbid it, because the report beside it owns that decision and cannot see what the search found. Nothing in the card's copy frames news as advice.
+- **`found: false` has two opposite causes, and they render differently.** A search that ran and returned nothing is **a real finding** — and the normal state for a bench, which is asked only about change. A player the model returned no entry for is **a coverage gap**: nobody looked, so nothing is known either way. `noFindingKind` in `src/lib/news.ts` keys on the note upstream attaches, with an `unknown` fallback so a reworded note degrades to a neutral treatment rather than being asserted as one of the two. The bench collapse folds only searched-and-empty rows for the same reason — folding a coverage gap under "no change reported" would state it as a quiet week.
 
 The two layers fail independently upstream and degrade independently here: a dead grounded call stores `news: null` with a `news_error`, which renders as one muted line — distinct from "not generated yet", which stays silent — while the summary and report beside it render normally.
 
@@ -52,6 +137,22 @@ cp .dev.vars.example .dev.vars
 ```
 
 Two ways to run it:
+
+`fixtures/` stands in for the bucket, bundled at build time via Vite's glob
+import — workerd has no filesystem, so fixtures can't be read with `node:fs`
+at request time even in local dev.
+
+**`fixtures/reports-json/**` is hand-authored** from the JSON handoff spec, and
+each file says so in a `_fixture_note`. It is shaped to hit the states real
+data will not reliably cover on any given week — a null and a real `0.0` in one
+column, a freshness array missing `odds`, a `blocks` section with both a named
+and a `heading: null` child, an `insufficient` section. Its `markdown` and
+`markdown_sha256` **are** real: the markdown is the exact bytes of the `.md`
+beside it and the digest is its true SHA-256, so the digest checks are
+exercised rather than decorative. Replace these with real objects when
+convenient. Note that `fixtures/reports/**` deliberately contains two reports
+with **no** structured twin, which is what keeps the markdown-only path
+covered.
 
 **Against fixtures (no AWS access needed).** Edit `.dev.vars` and set `USE_FIXTURES=1`, then:
 
@@ -75,10 +176,13 @@ Either way: `?nocache=1` on any URL bypasses the Cache API read for that request
 
 1. Confirm the bucket's region: `aws s3api get-bucket-location --bucket espn-ff-data-2026`.
 2. Create an IAM user, e.g. `ff-dashboard-reader`, with an inline policy granting only:
-   - `s3:GetObject` on `arn:aws:s3:::espn-ff-data-2026/reports/*` **and** `arn:aws:s3:::espn-ff-data-2026/summaries/*`
-   - `s3:ListBucket` on `arn:aws:s3:::espn-ff-data-2026`, scoped with `Condition: { StringLike: { "s3:prefix": ["reports/*", "summaries/*"] } }`
+   - `s3:GetObject` on `arn:aws:s3:::espn-ff-data-2026/reports/*`, `arn:aws:s3:::espn-ff-data-2026/reports-json/*` **and** `arn:aws:s3:::espn-ff-data-2026/summaries/*`
+   - `s3:ListBucket` on `arn:aws:s3:::espn-ff-data-2026`, scoped with `Condition: { StringLike: { "s3:prefix": ["reports/*", "reports-json/*", "summaries/*"] } }`
 
-   `summaries/*` is required for the AI summary cards. A key that predates them can still read reports: the summary listing fails, `loadSummary` swallows it, and every report renders without a card — so a too-narrow policy degrades quietly rather than erroring, and is worth checking explicitly if no card ever appears.
+   All three prefixes are required, and a too-narrow policy **degrades quietly rather than erroring** — which is exactly what makes it worth checking explicitly:
+
+   - Without `summaries/*`, every report renders with no summary and no news card. `loadSummary` swallows the listing failure by design.
+   - Without `reports-json/*`, the **homepage goes empty** while `/archive` keeps working, because the Daily surface's whole listing is that prefix. This one is easy to miss locally: fixtures make it pass under `USE_FIXTURES=1` and it only fails against the real bucket.
 
    This is read-only and prefix-scoped — it has no reach into the bucket's `state/`, `archive/`, or `logs/` prefixes. The bucket stays private; nothing here changes its Block Public Access settings.
 3. Generate an access key for that user and put it in `.dev.vars` for local dev, and in Cloudflare (see Deploy) for production. **The key never goes in `wrangler.jsonc`, `.dev.vars.example`, or any commit** — `.dev.vars` is gitignored.
@@ -121,6 +225,10 @@ npx wrangler deploy
 - **No extra cost**: `npx wrangler tail` while reloading — the news must add no `ListObjectsV2` and no `GetObject`, since it rides the envelope the summary card already fetched.
 
 Note: `import.meta.glob` is eager, so **adding or removing a fixture file needs a dev-server restart**, and the 300s listing cache survives that restart — use `?nocache=1` after changing which fixture keys exist, or the listing will still describe the old set.
+- **Surface separation**: `/` and `/r/**` list only reports with a structured twin; the two fixtures without one are absent there and present in `/archive`. `/r/2026/1/availability-watchlist` must 404 with a pointer at the archive, and `/archive/2026/1/availability-watchlist` must render *without* the "Open the structured view" button. `/reports/**` must 301 to `/archive/**`.
+- **Structured rendering**: in the settlements table, the null bid/projection row must read `no reading` in grey and the `0.0` row must read `0` — same column, visibly different. Check the `insufficient` section renders as its own dashed state, the `blocks` section shows one named child and one unlabelled continuation, the freshness strip shows three feeds with `nflverse` stale, and the null `data` chip reads `no reading` rather than being dropped.
+- **Layer states**: the waiver report has grounded news (per-group badges, one `Not covered` row that is never folded into the bench collapse); the Monday report is ungrounded on all three groups (an alert naming all three, plus three `Ungrounded` badges); the week-in-review has `news_error` (one muted line) and a stale summary (a negative alert plus a `Digest mismatch` badge).
+- **View preference does not leak**: set Markdown view on an archive report, then load `/`. Sections 01 and 02 must still be visible — the mode is mirrored onto `<html>` and `global.css` uses it to hide those cards, so the daily view must ignore the stored value.
 - **Failure path**: an invalid/missing AWS secret renders a clean empty state, never a 500.
 - **Responsive**: check both the desktop (topbar, two-column layout) and mobile (compact header, bottom tabs, no view toggle) layouts.
 
@@ -128,17 +236,27 @@ Note: `import.meta.glob` is eager, so **adding or removing a fixture file needs 
 
 ```
 src/
-├── lib/           s3.ts, reports.ts, summaries.ts, news.ts, schedule.ts, cache.ts, render.ts, env.ts
+├── lib/           s3.ts, reports.ts, reportJson.ts, summaries.ts, news.ts,
+│                  sections.ts, schedule.ts, cache.ts, render.ts, page.ts, env.ts
 ├── layouts/       Shell.astro
 ├── components/    Topbar, ReportHeader, FreshnessRow, AiSummary, RosterNews,
 │                  NewsUnavailable, ReportArticle, ReportIndex, NextReportNote,
 │                  MobileTabs, EmptyState, ui/*
+│   └── report/    DailyView, DailyHeader, DailyAside, StructuredReport,
+│                  ReportSections, ReportSection, SectionTable, SectionProse,
+│                  SectionList, SectionInsufficient, SectionHeader,
+│                  FreshnessStrip, DataChips
 ├── styles/        tokens.css, global.css, print.css
-└── pages/         index.astro, reports/index.astro, reports/[season]/[week]/[slug].astro
+└── pages/         index.astro, r/[season]/[week]/[slug].astro,
+                   archive/index.astro, archive/[season]/[week]/[slug].astro
 ```
 
-`src/lib/s3.ts`, `src/lib/reports.ts`, and `src/lib/summaries.ts` are the only files that know what a bucket, key, or signature is (`src/lib/news.ts` is pure shaping over an envelope already fetched) — pages and components work entirely in terms of `ReportMeta` and rendered HTML.
+`src/lib/s3.ts`, `src/lib/reports.ts`, `src/lib/reportJson.ts`, and `src/lib/summaries.ts` are the only files that know what a bucket, key, or signature is (`src/lib/news.ts` and `src/lib/sections.ts` are pure shaping over an envelope already fetched) — pages and components work entirely in terms of `ReportMeta`, envelopes, and rendered HTML.
+
+`src/lib/page.ts` assembles everything a page needs, so each `.astro` route is markup. Before it existed the four routes carried ~95% duplicated frontmatter.
+
+`src/components/report/ReportSection.astro` self-imports: a `blocks` section's children are themselves sections, so the dispatcher is the thing that recurses. `MAX_BLOCK_DEPTH` bounds it, and a section past the cap renders its children flat rather than being dropped — upstream only nests one level, so hitting the cap means the envelope changed, and losing content is worse than losing hierarchy.
 
 ## Out of scope
 
-Charts, R2, auth, dark mode, search, RSS, multi-league support, a settings page. (JSON ingestion is in scope only for the `summaries/` envelopes described above — both layers they carry — and no other JSON is read.)
+Charts, R2, auth, dark mode, search, RSS, multi-league support, a settings page. (JSON ingestion is in scope only for the `reports-json/` and `summaries/` envelopes described above — all three layers they carry — and no other JSON is read.)

@@ -1,0 +1,83 @@
+---
+import SectionTable from './SectionTable.astro';
+import SectionProse from './SectionProse.astro';
+import SectionList from './SectionList.astro';
+import SectionInsufficient from './SectionInsufficient.astro';
+import FreshnessStrip from './FreshnessStrip.astro';
+import DataChips from './DataChips.astro';
+// Self-import: a `blocks` section's children are themselves sections, so the
+// dispatcher is the thing that recurses. `depth` is what bounds it.
+import ReportSection from './ReportSection.astro';
+import { isContinuation, MAX_BLOCK_DEPTH } from '../../lib/sections';
+import type { Section } from '../../lib/reportJson';
+
+export interface Props {
+  section: Section;
+  depth?: number;
+}
+const { section, depth = 0 } = Astro.props as Props;
+
+// A child block's heading is null as a layout instruction — it continues the
+// parent rather than opening a section of its own — so it gets no heading
+// slot at all. A top-level section always shows its own.
+const showHeading = !isContinuation(section) && depth > 0;
+
+// Blocks below the cap render their children flat rather than being dropped:
+// upstream only nests one level, so hitting this means the envelope changed,
+// and losing content is worse than losing hierarchy.
+const children =
+  section.kind === 'blocks' && Array.isArray(section.blocks) ? section.blocks : [];
+const recurse = depth < MAX_BLOCK_DEPTH;
+---
+
+<div class="dttw-section" data-kind={section.kind} data-continuation={isContinuation(section) ? 'true' : undefined}>
+  {showHeading && <p class="dttw-section__subtitle">{section.heading}</p>}
+
+  {section.kind === 'freshness' && <FreshnessStrip section={section} />}
+  {section.kind === 'table' && <SectionTable section={section} />}
+  {section.kind === 'prose' && <SectionProse section={section} />}
+  {section.kind === 'list' && <SectionList section={section} />}
+  {section.kind === 'insufficient' && <SectionInsufficient section={section} />}
+
+  {section.kind === 'blocks' && (
+    <div class="dttw-section__blocks">
+      {children.map((child) => (
+        <ReportSection section={child} depth={recurse ? depth + 1 : depth} />
+      ))}
+    </div>
+  )}
+
+  {/* `data` carries the facts the rows do not — numbers the markdown states
+      only inside a sentence. Shown for every kind that can hold them, and
+      never for `blocks`, whose data belongs to its children. */}
+  {section.kind !== 'blocks' && <DataChips section={section} />}
+</div>
+
+<style>
+  .dttw-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  /* A named child block reads as a subheading, not as a new top-level
+     section — the parent's own heading is rendered by the page. */
+  .dttw-section__subtitle {
+    font: var(--type-body);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .dttw-section__blocks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  /* A continuation block sits tight against what precedes it, because that
+     is what `heading: null` means: same section, next element. */
+  .dttw-section[data-continuation='true'] {
+    gap: var(--space-3);
+  }
+</style>

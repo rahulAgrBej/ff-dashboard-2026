@@ -1,0 +1,34 @@
+---
+import Shell from '../../../../layouts/Shell.astro';
+import DailyView from '../../../../components/report/DailyView.astro';
+import DailyAside from '../../../../components/report/DailyAside.astro';
+import EmptyState from '../../../../components/EmptyState.astro';
+import { getEnv } from '../../../../lib/env';
+import { PAGE_CACHE_CONTROL } from '../../../../lib/cache';
+import { loadDailyPage } from '../../../../lib/page';
+
+const bypass = Astro.url.searchParams.get('nocache') === '1';
+Astro.response.headers.set('Cache-Control', PAGE_CACHE_CONTROL);
+
+const page = await loadDailyPage(getEnv(), bypass, {
+  kind: 'slug',
+  season: Number(Astro.params.season),
+  week: Number(Astro.params.week),
+  slug: Astro.params.slug as string,
+});
+
+// A report that exists as markdown but has no structured twin lands here.
+// 404 is the honest answer for this surface; the empty state points at the
+// archive, where it does exist.
+if (page.notFound) Astro.response.status = 404;
+
+const title = page.envelope ? page.envelope.header.title : 'Daily report';
+---
+
+<Shell title={`${title} · Down to the Wire`} activeTab="daily" hasAside={!page.emptyReason}>
+  {page.emptyReason ? <EmptyState reason={page.emptyReason} /> : <DailyView page={page} />}
+
+  <Fragment slot="aside">
+    {!page.emptyReason && <DailyAside page={page} />}
+  </Fragment>
+</Shell>

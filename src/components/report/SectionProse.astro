@@ -1,0 +1,35 @@
+---
+import { renderProse } from '../../lib/render';
+import type { ProseSection } from '../../lib/reportJson';
+
+export interface Props {
+  section: ProseSection;
+}
+const { section } = Astro.props as Props;
+
+const body = Array.isArray(section.body) ? section.body : [];
+---
+
+{body.length > 0 && (
+  <div
+    class="md dttw-prose"
+    data-emphasis={section.emphasis ? 'true' : undefined}
+    set:html={renderProse(body)}
+  />
+)}
+
+<style>
+  /* `.md` already carries the prose treatment and the measure from
+     global.css, which is also the only place that can reach `set:html`
+     children. This adds only what the structured form needs on top. */
+  .dttw-prose :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  /* `emphasis: true` flags a section the markdown itself bolds. Styling it
+     from the flag is the point — it means no component has to pattern-match
+     on `**` to find out. */
+  .dttw-prose[data-emphasis='true'] :global(p:first-child) {
+    color: var(--text-primary);
+  }
+</style>

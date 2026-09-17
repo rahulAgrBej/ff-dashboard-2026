@@ -1,6 +1,7 @@
 ---
 import Badge from './ui/Badge.astro';
-import { formatAsOf, type RosterNews } from '../lib/news';
+import Alert from './ui/Alert.astro';
+import { formatAsOf, noFindingKind, ungroundedGroups, type RosterNews, type RosterNewsGroup } from '../lib/news';
 
 export interface Props {
   news: RosterNews;
@@ -9,65 +10,201 @@ export interface Props {
   generatedAt: string;
   grounded: boolean;
   searchQueryCount: number;
+  /** The roster export the player identities came from. Identity is authoritative from this file, never from the model. */
+  rosterExport?: string | null;
+  rosterWeek?: number | null;
 }
 
-const { news, sources, model, generatedAt, grounded, searchQueryCount } = Astro.props as Props;
+const {
+  news,
+  sources,
+  model,
+  generatedAt,
+  grounded,
+  searchQueryCount,
+  rosterExport,
+  rosterWeek,
+} = Astro.props as Props;
+
+// Top-level `grounded: false` means *at least one* group is unsourced; the
+// per-group flag is where the answer is. Naming the groups is the whole
+// point — a footnote saying "a group" leaves the reader to guess.
+const unsourced = ungroundedGroups(news);
+
+/** "Starters", "Starters and Bench", "Starters, Bench and Injured reserve". */
+function listNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/**
+ * How many quiet rows a group shows before collapsing the rest.
+ *
+ * Only ever applied to a group that is *expected* to be quiet. A bench is
+ * asked only about change, so a searched-and-empty bench row is the normal
+ * answer and collapsing it hides nothing a reader wanted. A starter with no
+ * news is a finding, and is never collapsed.
+ */
+const QUIET_VISIBLE = 2;
+
+/**
+ * Splits a group into rows to show and rows to fold away.
+ *
+ * Only `searched-empty` rows are ever folded. A `not-covered` row is the one
+ * thing in a bench that is *not* "no change reported" — the search never
+ * returned an entry, so nothing is known either way — and folding it under
+ * that label would state a coverage gap as a quiet week. It stays visible
+ * however long the bench is.
+ */
+function quietSplit(group: RosterNewsGroup) {
+  if (group.key !== 'bench') return { shown: group.players, hidden: [] as typeof group.players };
+  const foldable = group.players.filter((p) => !p.found && noFindingKind(p) === 'searched-empty');
+  const keep = group.players.filter((p) => !foldable.includes(p));
+  return {
+    shown: [...keep, ...foldable.slice(0, QUIET_VISIBLE)],
+    hidden: foldable.slice(QUIET_VISIBLE),
+  };
+}
+
+const NO_FINDING_COPY = {
+  'searched-empty': 'Search ran, nothing found.',
+  'not-covered': 'No entry returned for this player.',
+  unknown: 'No news for this player.',
+} as const;
 ---
 
 <section class="dttw-news" data-grounded={grounded ? 'true' : 'false'}>
-  <div class="dttw-news__head">
-    <span class="flabel">Roster news</span>
-    {!grounded && <Badge tone="alert">Search did not fire — unsourced</Badge>}
-  </div>
-
-  {!grounded && (
-    <p class="dttw-news__warning">
-      At least one group came back with no grounding metadata, so its items came from the
-      model's own recall rather than a search run today. Treat them as unverified.
-    </p>
+  {unsourced.length > 0 && (
+    <div class="dttw-news__alert">
+      <Alert
+        tone="alert"
+        icon="alert-triangle"
+        title={`${listNames(unsourced.map((g) => g.label))} answered without grounding`}
+      >
+        The search never fired for {unsourced.length === 1 ? 'that group' : 'those groups'}, so its items came
+        from the model's own recall rather than anything read today. Shown, and marked on the group.
+      </Alert>
+    </div>
   )}
 
-  {news.groups.map((group) => (
-    <div class="dttw-news__group">
-      <div class="dttw-news__grouphead">
-        <span class="dttw-news__grouplabel">{group.label}</span>
+  {news.groups.map((group) => {
+    const split = quietSplit(group);
+    return (
+      <div class="dttw-news__group">
+        <div class="dttw-news__grouphead">
+          <span class="dttw-news__grouplabel">{group.label}</span>
+          {group.ask && <span class="dttw-news__ask">{group.ask}</span>}
+          <div class="dttw-news__groupright">
+            {/* `skipped` is checked first: a group entry has either the full
+                measurement keys or exactly one `skipped` key, never both. */}
+            {group.skipped ? (
+              <Badge tone="neutral">Skipped</Badge>
+            ) : (
+              <>
+                <span class="dttw-news__count">
+                  {group.foundCount} of {group.totalCount} with news
+                </span>
+                {group.grounded === false ? (
+                  <Badge tone="alert">Ungrounded</Badge>
+                ) : group.grounded === true ? (
+                  <Badge tone="positive">Grounded</Badge>
+                ) : null}
+                {group.sourceCount > 0 && (
+                  <span class="mono">{group.sourceCount} {group.sourceCount === 1 ? 'source' : 'sources'}</span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
         {group.skipped ? (
-          <span class="dttw-news__count">none this week</span>
+          <p class="dttw-news__skipped">{group.skipped}</p>
         ) : (
-          <span class="dttw-news__count">{group.foundCount} of {group.totalCount} with news</span>
+          <ul class="dttw-news__list">
+            {split.shown.map((player) => {
+              const kind = player.found ? null : noFindingKind(player);
+              const asOf = formatAsOf(player.as_of);
+              return (
+                <li class="dttw-news__item" data-found={player.found ? 'true' : 'false'}>
+                  <div class="dttw-news__who">
+                    <p class="dttw-news__name">{player.player_name ?? `Player ${player.player_id}`}</p>
+                    <p class="dttw-news__meta">
+                      {[player.position, player.pro_team, player.lineup_slot && `slot ${player.lineup_slot}`]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                    {/* The league's own designation as of the last export,
+                        which may be days old. Labelled as such: it is
+                        context, not current status, and must not be read as
+                        news sitting beside a fresh headline. */}
+                    {player.espn_injury_status && (
+                      <p class="dttw-news__status">
+                        ESPN designation, last export: <b>{player.espn_injury_status}</b>
+                      </p>
+                    )}
+                  </div>
+
+                  {player.found ? (
+                    <div class="dttw-news__body">
+                      <p class="dttw-news__headline">{player.headline}</p>
+                      {player.detail && <p class="dttw-news__detail">{player.detail}</p>}
+                      <p class="dttw-news__foot">
+                        {/* An undated item leaves `as_of` empty on purpose,
+                            rather than defaulting to today. Falling back to
+                            `generated_at` would undo that. */}
+                        {asOf ? <span>As of {asOf}</span> : <span class="dttw-news__undated">Date not established</span>}
+                        {group.grounded === false && <span class="dttw-news__undated">Unsourced — model recall</span>}
+                      </p>
+                    </div>
+                  ) : (
+                    <div class="dttw-news__body">
+                      <p class="dttw-news__none">
+                        {kind === 'not-covered' && <Badge tone="alert">Not covered</Badge>}
+                        {NO_FINDING_COPY[kind ?? 'unknown']}
+                      </p>
+                      {/* Silence and "no news" are different findings. A
+                          search that ran and found nothing is a real result;
+                          a player the model skipped is a coverage gap, and
+                          nothing was learned about them either way. */}
+                      <p class="dttw-news__note">
+                        {kind === 'searched-empty'
+                          ? 'A search ran for this player and returned nothing — a real finding.'
+                          : kind === 'not-covered'
+                            ? 'The model returned no entry at all — a coverage gap, not a quiet week.'
+                            : player.note}
+                      </p>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+
+            {split.hidden.length > 0 && (
+              <li class="dttw-news__item" data-found="false">
+                <details class="dttw-news__more">
+                  <summary>
+                    {split.hidden.length} more bench {split.hidden.length === 1 ? 'player' : 'players'} · no change reported
+                  </summary>
+                  <ul class="dttw-news__morelist">
+                    {/* Every row in here is searched-empty by construction —
+                        see `quietSplit`. A coverage gap is never folded. */}
+                    {split.hidden.map((player) => (
+                      <li>
+                        <span class="dttw-news__name">{player.player_name ?? `Player ${player.player_id}`}</span>
+                        <span class="dttw-news__meta">
+                          {[player.position, player.pro_team].filter(Boolean).join(' · ')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              </li>
+            )}
+          </ul>
         )}
       </div>
-
-      {group.skipped ? (
-        <p class="dttw-news__skipped">{group.skipped}</p>
-      ) : (
-        <ul class="dttw-news__list">
-          {group.players.map((player) => (
-            <li class="dttw-news__item" data-found={player.found ? 'true' : 'false'}>
-              <div class="dttw-news__who">
-                <span class="dttw-news__name">{player.player_name ?? `Player ${player.player_id}`}</span>
-                {player.position && <span class="dttw-news__tag">{player.position}</span>}
-                {player.pro_team && <span class="dttw-news__tag">{player.pro_team}</span>}
-              </div>
-              {player.found ? (
-                <div class="dttw-news__body">
-                  <p class="dttw-news__headline">
-                    {player.headline}
-                    {formatAsOf(player.as_of) && (
-                      <span class="dttw-news__asof">as of {formatAsOf(player.as_of)}</span>
-                    )}
-                  </p>
-                  {player.detail && <p class="dttw-news__detail">{player.detail}</p>}
-                </div>
-              ) : (
-                <p class="dttw-news__none">No news found</p>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  ))}
+    );
+  })}
 
   {sources.length > 0 && (
     <p class="dttw-news__sources">
@@ -80,63 +217,55 @@ const { news, sources, model, generatedAt, grounded, searchQueryCount } = Astro.
     </p>
   )}
 
-  <p class="dttw-news__meta">
-    Researched by <code>{model}</code> · {generatedAt}
-    {searchQueryCount > 0 && ` · ${searchQueryCount} ${searchQueryCount === 1 ? 'search' : 'searches'}`}
+  <p class="dttw-news__provenance">
+    <span class="mono">{model}</span>
+    <span class="mono">{generatedAt}</span>
+    {rosterExport && (
+      <span class="mono">roster {rosterExport}{rosterWeek ? ` · week ${rosterWeek}` : ''}</span>
+    )}
+    {/* A billing figure, not a quality one: 40 searches is more expensive
+        than 12, not better researched. Phrased so it cannot read as depth. */}
+    {searchQueryCount > 0 && (
+      <span class="mono">{searchQueryCount} {searchQueryCount === 1 ? 'query' : 'queries'} billed</span>
+    )}
   </p>
 </section>
 
 <style>
-  /* Same reasoning as `.dttw-ai`: a generated artifact with its own
-     lifecycle gets a container that cannot be mistaken for the report's own
-     deterministic output. Grey rather than the summary's blue because the
-     two cards sit adjacent and are different artifacts — and grey is
-     already in the ramp, so distinguishing them costs no new token. */
+  /* A generated artifact with its own lifecycle gets a container that cannot
+     be mistaken for the report's own deterministic output. Grey rather than
+     the summary's blue because the two sit adjacent and are different
+     artifacts. */
   .dttw-news {
     border: 1px solid var(--line-default);
     border-left: 3px solid var(--grey-500);
-    border-radius: 5px;
-    background: var(--surface-sunken);
-    padding: var(--space-5) var(--space-6);
+    border-radius: var(--radius-sm);
+    background: var(--surface-page);
+    overflow: hidden;
   }
 
-  /* Ungrounded means the items came from recall, which is the one failure
-     mode nothing downstream can detect by reading the text. It gets the
-     alert treatment for the whole card, not a footnote. */
+  /* Ungrounded means the items came from recall, the one failure mode nobody
+     downstream can detect by reading the text. */
   .dttw-news[data-grounded='false'] {
     border-left-color: var(--alert-text);
   }
 
-  .dttw-news__head {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-    margin-bottom: var(--space-4);
-  }
-
-  .dttw-news__head .flabel {
-    text-transform: uppercase;
-    color: var(--text-muted);
-  }
-
-  .dttw-news__warning {
-    margin: 0 0 var(--space-4);
-    font: var(--type-body-sm);
-    color: var(--alert-text);
-  }
-
-  .dttw-news__group + .dttw-news__group {
-    margin-top: var(--space-5);
+  .dttw-news__alert {
+    padding: var(--space-5) var(--space-6) 0;
   }
 
   .dttw-news__grouphead {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
+    align-items: center;
     gap: var(--space-3);
-    padding-bottom: var(--space-2);
-    border-bottom: var(--border-subtle);
+    flex-wrap: wrap;
+    padding: var(--space-4) var(--space-6);
+    background: var(--surface-sunken);
+    border-bottom: 1px solid var(--line-subtle);
+    border-top: 1px solid var(--line-subtle);
+  }
+  .dttw-news__group:first-of-type .dttw-news__grouphead {
+    border-top: none;
   }
 
   .dttw-news__grouplabel {
@@ -146,6 +275,18 @@ const { news, sources, model, generatedAt, grounded, searchQueryCount } = Astro.
     color: var(--text-secondary);
   }
 
+  .dttw-news__ask {
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+
+  .dttw-news__groupright {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
   .dttw-news__count,
   .dttw-news__skipped {
     font: var(--type-caption);
@@ -153,7 +294,8 @@ const { news, sources, model, generatedAt, grounded, searchQueryCount } = Astro.
   }
 
   .dttw-news__skipped {
-    margin: var(--space-3) 0 0;
+    margin: 0;
+    padding: var(--space-4) var(--space-6);
   }
 
   .dttw-news__list {
@@ -163,75 +305,113 @@ const { news, sources, model, generatedAt, grounded, searchQueryCount } = Astro.
   }
 
   .dttw-news__item {
-    display: flex;
-    gap: var(--space-4);
-    padding: var(--space-3) 0;
-    border-bottom: var(--border-subtle);
+    display: grid;
+    grid-template-columns: 216px 1fr;
+    gap: var(--space-6);
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--line-subtle);
   }
-
   .dttw-news__item:last-child {
     border-bottom: none;
   }
 
-  /* The roster guarantee is that everyone appears; the difference between a
-     finding and a blank has to be carried by weight, not by presence. */
+  /* Every rostered player is rendered, so the difference between a finding
+     and a blank has to be carried by weight rather than by presence. */
   .dttw-news__item[data-found='false'] {
-    color: var(--text-muted);
-  }
-
-  .dttw-news__who {
-    flex: 0 0 168px;
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    flex-wrap: wrap;
+    background: var(--surface-sunken);
   }
 
   .dttw-news__name {
-    font: var(--type-body-sm);
+    font: var(--type-body);
+    font-weight: var(--fw-medium);
     color: var(--text-primary);
+    margin: 0;
   }
 
-  .dttw-news__item[data-found='false'] .dttw-news__name {
+  .dttw-news__meta {
+    font: var(--type-data);
+    color: var(--text-muted);
+    margin: 3px 0 0;
+  }
+
+  .dttw-news__status {
+    margin: var(--space-2) 0 0;
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+  .dttw-news__status b {
+    font: var(--type-data);
+    font-weight: var(--fw-medium);
     color: var(--text-secondary);
   }
 
-  .dttw-news__tag {
-    font: var(--type-data);
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-
   .dttw-news__body {
-    flex: 1;
     min-width: 0;
   }
 
   .dttw-news__headline {
-    margin: 0;
-    font: var(--type-body-sm);
+    font: var(--type-body);
     color: var(--text-primary);
-  }
-
-  .dttw-news__asof {
-    margin-left: var(--space-3);
-    font: var(--type-data);
-    font-size: 11px;
-    color: var(--text-muted);
-    white-space: nowrap;
+    margin: 0;
+    text-wrap: pretty;
   }
 
   .dttw-news__detail {
-    margin: var(--space-2) 0 0;
     font: var(--type-body-sm);
     color: var(--text-secondary);
+    margin: var(--space-2) 0 0;
+    max-width: 72ch;
+    text-wrap: pretty;
+  }
+
+  .dttw-news__foot {
+    margin: var(--space-3) 0 0;
+    font: var(--type-caption);
+    color: var(--text-muted);
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .dttw-news__undated {
+    color: var(--alert-text);
   }
 
   .dttw-news__none {
-    flex: 1;
     margin: 0;
     font: var(--type-body-sm);
     color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .dttw-news__note {
+    margin: var(--space-1) 0 0;
+    font: var(--type-caption);
+    color: var(--text-disabled);
+  }
+
+  .dttw-news__more summary {
+    font: var(--type-body-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .dttw-news__morelist {
+    list-style: none;
+    margin: var(--space-3) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .dttw-news__morelist li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+  .dttw-news__morelist .dttw-news__meta {
+    margin: 0;
   }
 
   .dttw-news__sources {
@@ -239,9 +419,9 @@ const { news, sources, model, generatedAt, grounded, searchQueryCount } = Astro.
     align-items: baseline;
     flex-wrap: wrap;
     gap: var(--space-2) var(--space-3);
-    margin: var(--space-5) 0 0;
-    padding-top: var(--space-4);
-    border-top: var(--border-subtle);
+    margin: 0;
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--line-subtle);
     font: var(--type-caption);
   }
 
@@ -255,28 +435,35 @@ const { news, sources, model, generatedAt, grounded, searchQueryCount } = Astro.
     color: var(--text-secondary);
   }
 
-  .dttw-news__meta {
-    margin: var(--space-4) 0 0;
-    font: var(--type-caption);
-    color: var(--text-muted);
+  .dttw-news__provenance {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-5);
+    margin: 0;
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--line-subtle);
+    background: var(--surface-sunken);
   }
 
-  .dttw-news__meta code {
-    font: var(--type-data);
-    font-size: 11.5px;
-  }
-
-  /* The two-column player row assumes room the phone doesn't have. */
+  /* The two-column row assumes room the phone does not have. */
   @media (max-width: 700px) {
-    .dttw-news {
-      padding: var(--space-4) var(--space-5);
-    }
     .dttw-news__item {
-      flex-direction: column;
-      gap: var(--space-1);
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+      padding: var(--space-4);
     }
-    .dttw-news__who {
-      flex: none;
+    .dttw-news__grouphead,
+    .dttw-news__sources,
+    .dttw-news__provenance,
+    .dttw-news__skipped {
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+    }
+    .dttw-news__alert {
+      padding: var(--space-4) var(--space-4) 0;
+    }
+    .dttw-news__ask {
+      display: none;
     }
   }
 </style>

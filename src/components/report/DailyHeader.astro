@@ -1,0 +1,85 @@
+---
+import Badge from '../ui/Badge.astro';
+import type { ReportEnvelope } from '../../lib/reportJson';
+
+export interface Props {
+  envelope: ReportEnvelope;
+  eyebrowSuffix?: string;
+}
+const { envelope, eyebrowSuffix } = Astro.props as Props;
+const header = envelope.header;
+
+// `day`, not `day_label`: both Tuesday reports carry `day_label: "tuesday"`,
+// so the label would name the wrong one half the time.
+const eyebrow = `Week ${envelope.week} · ${envelope.day}`;
+
+// The display strings, because these are the exact strings the report showed.
+// The raw fields beside them are for computing, and nothing here computes.
+const window = header.week_window?.display;
+const hasWindow = !!header.week_window?.start && !!header.week_window?.end;
+---
+
+<header class="dttw-dhead">
+  <div class="dttw-dhead__eyebrow">
+    <span class="eyebrow">{eyebrow}{eyebrowSuffix && ` · ${eyebrowSuffix}`}</span>
+    <Badge tone="neutral">schema {envelope.schema_version}</Badge>
+  </div>
+  <h1 class="dttw-dhead__title">{header.title}</h1>
+  {header.covers && <p class="dttw-dhead__covers">{header.covers}</p>}
+  <div class="dttw-dhead__meta">
+    {/* When start/end are null the display string is the literal
+        "insufficient data" — shown as such rather than as a date range, so
+        absent and unavailable stay distinguishable. */}
+    {window && <span class="mono" data-unavailable={hasWindow ? undefined : 'true'}>{window}</span>}
+    {header.rendered_display && <span class="mono">Rendered {header.rendered_display}</span>}
+    <span class="mono">{envelope.stem}</span>
+  </div>
+</header>
+
+<style>
+  .dttw-dhead {
+    padding-bottom: var(--space-5);
+    border-bottom: var(--border-subtle);
+  }
+  .dttw-dhead__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+  .dttw-dhead__title {
+    margin: 0;
+    font: var(--type-title-1);
+    letter-spacing: var(--ls-title-1);
+    color: var(--text-primary);
+    max-width: 32ch;
+    text-wrap: pretty;
+  }
+  .dttw-dhead__covers {
+    margin: var(--space-3) 0 0;
+    font: var(--type-body);
+    color: var(--text-secondary);
+    max-width: 68ch;
+    text-wrap: pretty;
+  }
+  .dttw-dhead__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-5);
+    margin-top: var(--space-4);
+  }
+  .dttw-dhead__meta .mono[data-unavailable='true'] {
+    color: var(--alert-text);
+  }
+
+  @media (max-width: 700px) {
+    .dttw-dhead__title {
+      font: var(--type-title-2);
+      letter-spacing: var(--ls-title-2);
+    }
+    /* The stem is a filename; on a phone it is the first thing to go. */
+    .dttw-dhead__meta .mono:last-child {
+      display: none;
+    }
+  }
+</style>

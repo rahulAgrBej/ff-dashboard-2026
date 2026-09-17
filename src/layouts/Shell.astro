@@ -22,7 +22,7 @@ const { title, activeTab, showTopbarActions = false, hasAside = false } = Astro.
   </head>
   <body>
     <div class="dttw-shell">
-      <Topbar showActions={showTopbarActions}>
+      <Topbar showActions={showTopbarActions} activeTab={activeTab}>
         <Fragment slot="actions"><slot name="topbar-actions" /></Fragment>
       </Topbar>
       <div class="dttw-body">
@@ -55,9 +55,14 @@ const { title, activeTab, showTopbarActions = false, hasAside = false } = Astro.
           });
         }
 
+        // Only restore the stored view on a page that actually has the
+        // toggle. The mode is mirrored onto <html>, and global.css uses it to
+        // hide the summary and news cards — so restoring "raw" on the daily
+        // view would blank sections 01 and 02 with no control to bring them
+        // back. The archive owns this preference; the daily view ignores it.
         try {
           var stored = localStorage.getItem(STORAGE_KEY);
-          if (stored) apply(stored);
+          if (stored && view) apply(stored);
         } catch (e) {}
 
         document.querySelectorAll('[data-view-btn]').forEach(function (btn) {

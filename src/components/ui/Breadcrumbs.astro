@@ -1,0 +1,62 @@
+---
+export interface Crumb {
+  label: string;
+  href?: string;
+}
+
+export interface Props {
+  items: Crumb[];
+}
+
+const { items } = Astro.props as Props;
+---
+
+<nav class="dttw-crumbs" aria-label="Breadcrumb">
+  {items.map((item, i) => {
+    const last = i === items.length - 1;
+    return (
+      <span class="dttw-crumbs__item">
+        {last || !item.href ? (
+          <span class="dttw-crumbs__current" aria-current={last ? 'page' : undefined}>{item.label}</span>
+        ) : (
+          <a href={item.href}>{item.label}</a>
+        )}
+        {!last && <span class="dttw-crumbs__sep" aria-hidden="true">/</span>}
+      </span>
+    );
+  })}
+</nav>
+
+<style>
+  .dttw-crumbs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font: var(--type-caption);
+    color: var(--text-muted);
+    min-width: 0;
+  }
+  .dttw-crumbs__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    white-space: nowrap;
+  }
+  .dttw-crumbs__current {
+    color: var(--text-primary);
+  }
+  .dttw-crumbs a {
+    color: var(--text-muted);
+  }
+  .dttw-crumbs__sep {
+    color: var(--line-strong);
+  }
+
+  /* The topbar is hidden on mobile, but the trail is also the page's only
+     "where am I" on a narrow viewport, so it truncates rather than wraps. */
+  @media (max-width: 700px) {
+    .dttw-crumbs {
+      overflow: hidden;
+    }
+  }
+</style>

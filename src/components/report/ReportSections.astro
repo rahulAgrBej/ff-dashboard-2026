@@ -1,0 +1,43 @@
+---
+import ReportSection from './ReportSection.astro';
+import type { Section } from '../../lib/reportJson';
+
+export interface Props {
+  sections: Section[];
+}
+const { sections } = Astro.props as Props;
+---
+
+<div class="dttw-sections">
+  {sections.map((section) => (
+    <section class="dttw-sections__item" aria-labelledby={section.heading ? `sec-${section.id}` : undefined}>
+      {/* Routed on `id`, displayed from `heading`. Two report types build
+          their headings at render time — Saturday's "Tier changes since
+          <date>" and Thursday's "Canonical usage -- week N" — so nothing
+          may key on the text. */}
+      {section.heading && (
+        <h3 class="dttw-sections__heading" id={`sec-${section.id}`}>{section.heading}</h3>
+      )}
+      <ReportSection section={section} />
+    </section>
+  ))}
+</div>
+
+<style>
+  .dttw-sections {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-7);
+  }
+  .dttw-sections__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  .dttw-sections__heading {
+    margin: 0;
+    font: var(--type-title-3);
+    letter-spacing: var(--ls-title-3);
+    color: var(--text-primary);
+  }
+</style>

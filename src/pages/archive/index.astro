@@ -16,24 +16,22 @@ Astro.response.headers.set('Cache-Control', PAGE_CACHE_CONTROL);
 let reports: ReportMeta[];
 let emptyReason: string | null = null;
 try {
-  reports = await loadReports(env, bypass);
+  reports = await loadReports(env, bypass, 'reports');
   reports = await attachDatelines(env, reports, bypass);
 } catch (err) {
   reports = [];
   emptyReason = err instanceof S3Error ? err.message : 'S3 is unreachable.';
 }
 
-const now = new Date();
-const weekSummaries = !emptyReason ? buildWeekSummaries(reports, now) : [];
+const weekSummaries = !emptyReason ? buildWeekSummaries(reports, new Date()) : [];
 const latest = latestReport(reports);
 ---
 
 <Shell title="Markdown report archive · Down to the Wire" activeTab="archive">
   <h1 class="dttw-page-title">Markdown report archive</h1>
   <p class="dttw-lede">
-    Every report as the pipeline wrote it. Reports rendered before the structured JSON
-    existed have no twin and there is no backfill, so the earliest weeks are here and
-    nowhere else.
+    Every report as the pipeline wrote it. Reports rendered before the structured JSON existed have
+    no twin and there is no backfill, so the earliest weeks are here and nowhere else.
   </p>
   {emptyReason ? (
     <EmptyState reason={emptyReason} />
