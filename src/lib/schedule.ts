@@ -246,9 +246,24 @@ export interface WeekSummary {
   slots: MergedSlot[];
 }
 
-/** One group per distinct (season, week) that appears in the reports list, newest first. */
-export function buildWeekSummaries(reports: ReportMeta[], now: Date): WeekSummary[] {
-  const windows = collectWeekWindows(reports);
+/**
+ * One group per distinct (season, week) that appears in the reports list,
+ * newest first.
+ *
+ * `seedWindows` lets a caller supply week windows it already holds instead of
+ * paying for them. The markdown surface has to parse them out of datelines
+ * (`collectWeekWindows`, which needs `attachDatelines` to have fetched every
+ * body); the structured surface gets one exact window free in the envelope's
+ * `header.week_window`, and `weekDateRange` extrapolates every other week in
+ * the season from it — so one object labels the whole sidebar and the
+ * dateline fan-out can be skipped entirely.
+ */
+export function buildWeekSummaries(
+  reports: ReportMeta[],
+  now: Date,
+  seedWindows?: Map<string, WeekWindow>
+): WeekSummary[] {
+  const windows = seedWindows?.size ? seedWindows : collectWeekWindows(reports);
   const seen = new Map<string, { season: number; week: number }>();
   for (const r of reports) {
     seen.set(`${r.season}-${r.week}`, { season: r.season, week: r.week });

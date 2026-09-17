@@ -143,3 +143,34 @@ export function renderReport(markdown: string): RenderedReport {
 export function renderSummary(markdown: string): string {
   return marked.parse(markdown.trim(), { async: false }) as string;
 }
+
+/**
+ * A report-JSON section's `body[]` lines, rendered as markdown.
+ *
+ * Runs on the **same** configured `marked` instance as the reports above, and
+ * deliberately so: the token-level HTML escaping at `html()` and the
+ * `insufficient data` sentinel extension both apply, so a structured section
+ * gets exactly the treatment its markdown twin got. A second `marked`
+ * configuration would drift from this one silently.
+ *
+ * Lines are joined rather than rendered one at a time because consecutive
+ * bullet lines are a single list, and rendering each alone would emit a
+ * separate one-item `<ul>` per bullet.
+ */
+export function renderProse(body: string[] | string): string {
+  const text = Array.isArray(body) ? body.join('\n') : body;
+  return marked.parse(text.trim(), { async: false }) as string;
+}
+
+/**
+ * A single line of markdown with **no** block wrapper — for a table's
+ * `notes[]` and a continuation block's italic aside, which are phrases inside
+ * an existing element rather than paragraphs of their own.
+ *
+ * Notes keep the report's own phrasing verbatim (there the words *are* the
+ * data), so the emphasis in them has to survive; `parseInline` keeps it
+ * without wrapping the phrase in a `<p>` the caller would have to unwrap.
+ */
+export function renderInline(text: string): string {
+  return marked.parseInline(text.trim(), { async: false }) as string;
+}

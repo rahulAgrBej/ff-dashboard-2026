@@ -32,6 +32,8 @@ export interface SummaryEnvelope {
   summary_markdown: string;
   model: string;
   generated_at: string;
+  /** Bucket keys of the earlier reports given to the model as context. Surfaced as a count ("1 prior report in context"), never as a list of links — they are inputs to the prose, not sources for it. */
+  prior_reports?: string[] | null;
   /** v2 only. Null when the grounded calls failed — `news_error` then carries the reason. */
   news?: NewsBlock | null;
   /** v2 only. Mutually exclusive with `news` by construction upstream: exactly one is populated. */

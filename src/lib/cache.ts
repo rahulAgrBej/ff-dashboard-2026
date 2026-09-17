@@ -4,9 +4,15 @@ import type { Dateline } from './dateline';
 const LISTING_TTL_S = 300;
 const BODY_TTL_S = 60 * 60 * 24 * 365; // 1 year — safe because the cache key embeds the ETag
 
-const LISTING_CACHE_KEY = 'https://internal/listing/reports';
-
-/** The `summaries/` listing gets its own entry — same 300s TTL, separate key, so neither prefix can serve the other's objects. */
+/**
+ * One cache entry per bucket prefix — same 300s TTL, separate keys, so no
+ * prefix can ever serve another's objects. Three prefixes carry the same
+ * `<season>/week-NN/<stem>` identity (`reports/` the markdown, `reports-json/`
+ * the structured twin, `summaries/` the AI envelope) and are listed
+ * independently, because a report can exist under one and not the others.
+ */
+export const REPORTS_LISTING_CACHE_KEY = 'https://internal/listing/reports';
+export const REPORT_JSON_LISTING_CACHE_KEY = 'https://internal/listing/reports-json';
 export const SUMMARY_LISTING_CACHE_KEY = 'https://internal/listing/summaries';
 
 /** The response header this dashboard sends on every page: fresh at the edge for 60s, servable stale for another 300s while a background revalidation runs. */
@@ -31,7 +37,7 @@ function defaultCache(): Cache | undefined {
 export async function getCachedListing(
   bypass: boolean,
   loader: () => Promise<S3Object[]>,
-  key: string = LISTING_CACHE_KEY
+  key: string = REPORTS_LISTING_CACHE_KEY
 ): Promise<S3Object[]> {
   const cache = defaultCache();
   const cacheKey = new Request(key);

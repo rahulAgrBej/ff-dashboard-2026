@@ -74,7 +74,7 @@ const weekWindowLabel = latest ? weekDateRange(latest.season, latest.week, colle
 const covers = rendered?.dateline?.covers ?? null;
 ---
 
-<Shell title={`${title} · Down to the Wire`} activeTab="latest" showTopbarActions={!emptyReason} hasAside={!emptyReason}>
+<Shell title={`${title} · Down to the Wire`} activeTab="daily" showTopbarActions={!emptyReason} hasAside={!emptyReason}>
   {emptyReason ? (
     <EmptyState reason={emptyReason} />
   ) : (

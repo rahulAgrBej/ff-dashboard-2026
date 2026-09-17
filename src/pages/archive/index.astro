@@ -28,8 +28,13 @@ const weekSummaries = !emptyReason ? buildWeekSummaries(reports, now) : [];
 const latest = latestReport(reports);
 ---
 
-<Shell title="All reports · Down to the Wire" activeTab="reports">
-  <h1 class="dttw-page-title">All reports</h1>
+<Shell title="Markdown report archive · Down to the Wire" activeTab="archive">
+  <h1 class="dttw-page-title">Markdown report archive</h1>
+  <p class="dttw-lede">
+    Every report as the pipeline wrote it. Reports rendered before the structured JSON
+    existed have no twin and there is no backfill, so the earliest weeks are here and
+    nowhere else.
+  </p>
   {emptyReason ? (
     <EmptyState reason={emptyReason} />
   ) : (
@@ -38,6 +43,7 @@ const latest = latestReport(reports);
         weeks={weekSummaries}
         currentKey={latest?.key}
         openWeeks={weekSummaries.map((w) => w.week)}
+        surface="archive"
       />
       <p class="dttw-caption">{summaryCaption(reports)}</p>
     </>
@@ -50,6 +56,12 @@ const latest = latestReport(reports);
     letter-spacing: var(--ls-title-1);
     color: var(--text-primary);
     margin: 0;
+  }
+  .dttw-lede {
+    margin: var(--space-3) 0 var(--space-6);
+    font: var(--type-body);
+    color: var(--text-secondary);
+    max-width: 68ch;
   }
   .dttw-caption {
     margin: var(--space-4) 0 0;

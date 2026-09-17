@@ -1,45 +1,107 @@
 import { listObjects, getObject, type S3Env, type S3Object } from './s3';
-import { getCachedListing, getCachedBody, getCachedDateline } from './cache';
+import {
+  getCachedListing,
+  getCachedBody,
+  getCachedDateline,
+  REPORTS_LISTING_CACHE_KEY,
+  REPORT_JSON_LISTING_CACHE_KEY,
+} from './cache';
 import { parseDateline, type Dateline } from './dateline';
+
+/**
+ * The two bucket prefixes that hold one object per report. They share the
+ * same `<season>/week-NN/<stem>` path and differ only in prefix and
+ * extension, which is why one parser serves both and why any one of them
+ * addresses the others with a string swap rather than a lookup table.
+ *
+ * `reports/` is the older of the two and is complete; `reports-json/` began
+ * mid-season, so early reports exist under `reports/` alone.
+ */
+export type ReportPrefix = 'reports' | 'reports-json';
 
 export interface ReportMeta {
   key: string;
+  prefix: ReportPrefix; // which listing this came from — `key` alone would need re-parsing to tell
   season: number;
   week: number;
   date: string; // YYYY-MM-DD, from the filename — never derived from `day`
   day: string; // report-type token, e.g. "monday" — NOT a calendar weekday, see quirk #2
   slug: string; // opaque URL segment; never used to derive a title
+  stem: string; // `<date>-<day>-<slug>`, the join key across all three prefixes. NOT an identity — see `dedupeRenders`.
   etag: string;
   lastModified: string;
   dateline?: Dateline | null; // parsed **Covers**/**Week N**/**Rendered** block; undefined until attachDatelines runs, null when absent or unfetched
 }
 
-const KEY_RE = /^reports\/(\d{4})\/week-(\d{2})\/(\d{4}-\d{2}-\d{2})-([a-z]+)-(.+)\.md$/;
+// Capture groups, both patterns: 1 season, 2 week, 3 stem, 4 date, 5 day_label, 6 slug.
+// The stem is captured as a whole *and* decomposed, so callers that need the
+// join key don't have to reassemble it and risk drifting from the real one.
+const KEY_RES: Record<ReportPrefix, RegExp> = {
+  reports: /^reports\/(\d{4})\/week-(\d{2})\/((\d{4}-\d{2}-\d{2})-([a-z]+)-(.+))\.md$/,
+  'reports-json': /^reports-json\/(\d{4})\/week-(\d{2})\/((\d{4}-\d{2}-\d{2})-([a-z]+)-(.+))\.json$/,
+};
 
-/** Parses one S3 key into its report metadata. Returns null for anything that doesn't match the path convention — malformed keys are skipped, never thrown on, so one bad object can't take down the whole index. */
-export function parseReportKey(obj: S3Object): ReportMeta | null {
-  const m = KEY_RE.exec(obj.key);
+const EXTENSIONS: Record<ReportPrefix, string> = {
+  reports: '.md',
+  'reports-json': '.json',
+};
+
+const LISTING_CACHE_KEYS: Record<ReportPrefix, string> = {
+  reports: REPORTS_LISTING_CACHE_KEY,
+  'reports-json': REPORT_JSON_LISTING_CACHE_KEY,
+};
+
+/**
+ * Parses one S3 key into its report metadata. Returns null for anything that
+ * doesn't match the path convention — malformed keys are skipped, never
+ * thrown on, so one bad object can't take down the whole index.
+ *
+ * `day` here is the filename's `day_label`, which both Tuesday reports share
+ * (quirk #2). The report *type* that tells them apart lives in the JSON
+ * envelope's own `day` field and must never be written back over this one:
+ * `schedule.ts:matchSlot` disambiguates Tuesday's pair by slug and depends on
+ * the `day_label` reading.
+ */
+export function parseReportKey(obj: S3Object, prefix: ReportPrefix = 'reports'): ReportMeta | null {
+  const m = KEY_RES[prefix].exec(obj.key);
   if (!m) return null;
-  const [, season, week, date, day, slug] = m;
+  const [, season, week, stem, date, day, slug] = m;
   return {
     key: obj.key,
+    prefix,
     season: Number(season),
     week: Number(week),
     date,
     day,
     slug,
+    stem,
     etag: obj.etag,
     lastModified: obj.lastModified,
   };
 }
 
-export function parseReportKeys(objects: S3Object[]): ReportMeta[] {
+export function parseReportKeys(objects: S3Object[], prefix: ReportPrefix = 'reports'): ReportMeta[] {
   const parsed: ReportMeta[] = [];
   for (const obj of objects) {
-    const meta = parseReportKey(obj);
+    const meta = parseReportKey(obj, prefix);
     if (meta) parsed.push(meta);
   }
   return parsed;
+}
+
+/**
+ * Rewrites a report key from one prefix to another — the same string swap
+ * `summaries.ts:summaryKeyFor` does, generalized. All three prefixes mirror
+ * one tree, so this needs no lookup and no listing.
+ *
+ * Returns null when the key doesn't belong to `from`, so a caller can never
+ * silently build a key out of something else.
+ */
+export function rekey(key: string, from: ReportPrefix, to: ReportPrefix): string | null {
+  const fromExt = EXTENSIONS[from];
+  if (!key.startsWith(`${from}/`) || !key.endsWith(fromExt)) return null;
+  const middle = key.slice(from.length + 1, -fromExt.length);
+  return `${to}/${middle}${EXTENSIONS[to]}`;
 }
 
 /** Title comes from the report's own H1, never the slug — the slug is a hardcoded, opaque URL segment upstream (see quirk #1). */
@@ -49,8 +111,24 @@ export function extractTitle(markdown: string): string {
   return m[1].trim();
 }
 
-export function reportUrl(meta: ReportMeta): string {
-  return `/reports/${meta.season}/${meta.week}/${meta.slug}`;
+/**
+ * The two read surfaces, both keyed on `(season, week, slug)`.
+ *
+ * Deliberately **not** on `stem`: a stem embeds the filename date, and
+ * upstream re-running a report writes a new date onto the same slot — so a
+ * stem-keyed URL would change under a re-render. `slug` is this repo's stable
+ * report identity, which is exactly what `dedupeRenders` below collapses on.
+ *
+ * `/r/*` renders the structured `reports-json/` envelope; `/archive/*`
+ * renders the markdown, and is the only surface where a report with no JSON
+ * twin appears at all.
+ */
+export function dailyUrl(meta: ReportMeta): string {
+  return `/r/${meta.season}/${meta.week}/${meta.slug}`;
+}
+
+export function archiveUrl(meta: ReportMeta): string {
+  return `/archive/${meta.season}/${meta.week}/${meta.slug}`;
 }
 
 /**
@@ -89,10 +167,27 @@ export function dedupeRenders(reports: ReportMeta[]): ReportMeta[] {
   return reports.filter((r) => winners.has(r));
 }
 
-/** The listing is the single source that drives the sidebar, latest selection, and every object's ETag/LastModified — fetched at most once per 300s via the Cache API. */
-export async function loadReports(env: S3Env, bypassCache: boolean): Promise<ReportMeta[]> {
-  const objects = await getCachedListing(bypassCache, () => listObjects(env, 'reports/'));
-  return dedupeRenders(parseReportKeys(objects));
+/**
+ * The listing is the single source that drives the sidebar, latest selection,
+ * and every object's ETag/LastModified — fetched at most once per 300s via
+ * the Cache API, under a cache key of its own per prefix.
+ *
+ * `prefix` picks the surface: `reports/` backs the markdown archive and is
+ * complete, `reports-json/` backs the daily view and starts mid-season. A
+ * report present in only one of them is simply absent from the other's
+ * index — that asymmetry is the data, not a failure to reconcile.
+ */
+export async function loadReports(
+  env: S3Env,
+  bypassCache: boolean,
+  prefix: ReportPrefix = 'reports'
+): Promise<ReportMeta[]> {
+  const objects = await getCachedListing(
+    bypassCache,
+    () => listObjects(env, `${prefix}/`),
+    LISTING_CACHE_KEYS[prefix]
+  );
+  return dedupeRenders(parseReportKeys(objects, prefix));
 }
 
 // Cloudflare's per-request subrequest limit, not a design choice — reports

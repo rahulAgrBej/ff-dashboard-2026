@@ -82,13 +82,13 @@ const weekWindowLabel = current ? weekDateRange(current.season, current.week, co
 const covers = rendered?.dateline?.covers ?? null;
 ---
 
-<Shell title={`${title} · Down to the Wire`} activeTab="latest" showTopbarActions={!emptyReason} hasAside={!emptyReason}>
+<Shell title={`${title} · Down to the Wire`} activeTab="archive" showTopbarActions={!emptyReason} hasAside={!emptyReason}>
   {emptyReason ? (
     <EmptyState reason={emptyReason} />
   ) : (
     <>
       <ReportHeader
-        eyebrow={isLatest ? 'Most recent' : 'Report'}
+        eyebrow={isLatest ? 'Most recent · markdown' : 'Markdown only'}
         weekLabel={`Week ${current!.week}`}
         weekWindowLabel={weekWindowLabel}
         covers={covers}
@@ -135,7 +135,7 @@ const covers = rendered?.dateline?.covers ?? null;
   </Fragment>
 
   <Fragment slot="aside">
-    <Card title="All reports" subtitle="By week and day" padding="tight">
+    <Card title="All markdown files" subtitle="By week and day" padding="tight">
       <ReportIndex weeks={weekSummaries} currentKey={current?.key} openWeeks={currentWeek ? [currentWeek.week] : []} />
     </Card>
     <p class="dttw-caption">{summaryCaption(reports)}</p>

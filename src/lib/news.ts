@@ -164,6 +164,48 @@ export function buildRosterNews(news: NewsBlock): RosterNews {
 }
 
 /**
+ * Which kind of nothing a `found: false` row is.
+ *
+ * Both causes null out `headline`/`detail`/`as_of` and add a `note`, but they
+ * are opposite findings and upstream's whole reason for materialising skipped
+ * players is to keep them apart:
+ *
+ *  - `searched-empty` — a search ran and found nothing. **A real finding**,
+ *    and the normal state for a bench, which is asked only about change.
+ *  - `not-covered` — the model returned no entry for this player at all. **A
+ *    coverage gap**: nobody looked, so nothing was learned.
+ *
+ * Silence and "no news" must not render identically, which is exactly what
+ * they did while both showed one shared "No news found" line.
+ *
+ * Matched on the note's stable substring rather than the full string, and
+ * with an explicit `unknown` for anything else — a reworded note upstream
+ * should degrade to a neutral treatment, never be asserted as one of the two.
+ */
+export type NoFindingKind = 'searched-empty' | 'not-covered' | 'unknown';
+
+export function noFindingKind(player: NewsPlayer): NoFindingKind {
+  const note = typeof player.note === 'string' ? player.note.toLowerCase() : '';
+  if (note.includes('grounded search returned nothing')) return 'searched-empty';
+  if (note.includes('returned no entry')) return 'not-covered';
+  return 'unknown';
+}
+
+/**
+ * The groups whose search never fired, by label — so the page can name them
+ * instead of stating that "a group" was unsourced and leaving the reader to
+ * guess which.
+ *
+ * Top-level `grounded: false` means at least one group in the block is
+ * unsourced; the per-group flag is where the answer actually is. A skipped
+ * group has no opinion and is not counted: it ran nothing, so it failed at
+ * nothing.
+ */
+export function ungroundedGroups(news: RosterNews): RosterNewsGroup[] {
+  return news.groups.filter((group) => !group.skipped && group.grounded === false);
+}
+
+/**
  * Every distinct source behind this block, deduped by URI.
  *
  * Attribution upstream is **group-level only** — `groundingSupports` exists
