@@ -91,6 +91,24 @@ const { title, activeTab, showTopbarActions = false, hasAside = false } = Astro.
             });
           });
         }
+
+        document.querySelectorAll('[data-paged]').forEach(function (tbl) {
+          var size = parseInt(tbl.getAttribute('data-page-size'), 10) || 10;
+          var pages = parseInt(tbl.getAttribute('data-pages'), 10) || 1;
+          var rows = tbl.querySelectorAll('tr[data-page]');
+          var count = tbl.querySelector('[data-page-count]');
+          var next = tbl.querySelector('[data-page-next]');
+          var pager = next && next.parentElement;
+          var page = 0;
+
+          function show() {
+            rows.forEach(function (r) { r.hidden = +r.getAttribute('data-page') !== page; });
+            if (count) count.textContent = 'Page ' + (page + 1) + ' of ' + pages;
+          }
+          if (pager) pager.hidden = false; // only now, with JS live, is truncation honest
+          show();
+          if (next) next.addEventListener('click', function () { page = (page + 1) % pages; show(); });
+        });
       })();
     </script>
   </body>

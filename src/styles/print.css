@@ -31,3 +31,14 @@
     display: none !important;
   }
 }
+
+@media print {
+  .dttw-tpager {
+    display: none !important;
+  }
+  /* Author !important beats the UA's [hidden] { display: none }, so a
+     printed report carries every row a paginated table hid on screen. */
+  .dttw-tbl tbody tr[hidden] {
+    display: table-row !important;
+  }
+}

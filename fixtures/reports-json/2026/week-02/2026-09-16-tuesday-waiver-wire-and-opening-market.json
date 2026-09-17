@@ -135,14 +135,197 @@
           "projection": 0.0,
           "bye": false,
           "outcome": "Unclaimed"
+        },
+        {
+          "player_name": "Rome Odunze",
+          "tier": "probable",
+          "bid": 11,
+          "projection": 14.6,
+          "bye": false,
+          "outcome": "Claimed by others"
+        },
+        {
+          "player_name": "Will Shipley",
+          "tier": "questionable",
+          "bid": 5,
+          "projection": 8.9,
+          "bye": false,
+          "outcome": "Unclaimed"
+        },
+        {
+          "player_name": "Jalen Coker",
+          "tier": null,
+          "bid": null,
+          "projection": null,
+          "bye": null,
+          "outcome": "Newly available"
+        },
+        {
+          "player_name": "Demario Douglas",
+          "tier": "out",
+          "bid": 2,
+          "projection": 0.0,
+          "bye": false,
+          "outcome": "Unclaimed"
+        },
+        {
+          "player_name": "Tyjae Spears",
+          "tier": "probable",
+          "bid": 9,
+          "projection": 12.1,
+          "bye": true,
+          "outcome": "Claimed by us"
+        },
+        {
+          "player_name": "Xavier Legette",
+          "tier": "questionable",
+          "bid": 4,
+          "projection": 7.3,
+          "bye": false,
+          "outcome": "Claimed by others"
+        },
+        {
+          "player_name": "Jaylen Wright",
+          "tier": "out",
+          "bid": 1,
+          "projection": 0.0,
+          "bye": false,
+          "outcome": "Unclaimed"
+        },
+        {
+          "player_name": "Ricky Pearsall",
+          "tier": "probable",
+          "bid": 13,
+          "projection": 15.8,
+          "bye": false,
+          "outcome": "Claimed by us"
+        },
+        {
+          "player_name": "Luke McCaffrey",
+          "tier": null,
+          "bid": null,
+          "projection": null,
+          "bye": null,
+          "outcome": "Newly available"
+        },
+        {
+          "player_name": "Blake Corum",
+          "tier": "questionable",
+          "bid": 6,
+          "projection": 9.4,
+          "bye": true,
+          "outcome": "Claimed by others"
         }
       ],
       "notes": [
         "*Tiers are computed from practice participation, not from ESPN.*"
       ],
       "data": {
-        "count": 4
+        "count": 14
       }
+    },
+    {
+      "id": "availability",
+      "heading": "Availability",
+      "level": 2,
+      "kind": "table",
+      "columns": [
+        {
+          "key": "player_name",
+          "label": "player",
+          "type": "string"
+        },
+        {
+          "key": "position",
+          "label": "position",
+          "type": "string"
+        },
+        {
+          "key": "active",
+          "label": "active",
+          "type": "boolean"
+        },
+        {
+          "key": "role",
+          "label": "role",
+          "type": "string"
+        }
+      ],
+      "rows": [
+        {
+          "player_name": "Josh Allen",
+          "position": "QB",
+          "active": true,
+          "role": "starter"
+        },
+        {
+          "player_name": "Christian McCaffrey",
+          "position": "RB",
+          "active": false,
+          "role": "IR"
+        },
+        {
+          "player_name": "CeeDee Lamb",
+          "position": "WR",
+          "active": true,
+          "role": "starter"
+        },
+        {
+          "player_name": "Travis Kelce",
+          "position": "TE",
+          "active": true,
+          "role": "starter"
+        },
+        {
+          "player_name": "Tyreek Hill",
+          "position": "WR",
+          "active": true,
+          "role": "starter"
+        },
+        {
+          "player_name": "Bijan Robinson",
+          "position": "RB",
+          "active": true,
+          "role": "starter"
+        },
+        {
+          "player_name": "Justin Jefferson",
+          "position": "WR",
+          "active": true,
+          "role": "starter"
+        },
+        {
+          "player_name": "Kyren Williams",
+          "position": "RB",
+          "active": true,
+          "role": "bench"
+        },
+        {
+          "player_name": "Dallas Goedert",
+          "position": "TE",
+          "active": false,
+          "role": "questionable"
+        },
+        {
+          "player_name": "Rashee Rice",
+          "position": "WR",
+          "active": true,
+          "role": "bench"
+        },
+        {
+          "player_name": "James Cook",
+          "position": "RB",
+          "active": true,
+          "role": "bench"
+        },
+        {
+          "player_name": "Evan Engram",
+          "position": "TE",
+          "active": true,
+          "role": "bench"
+        }
+      ],
+      "notes": []
     },
     {
       "id": "add-candidates",
@@ -322,5 +505,5 @@
     "markdown_path": "reports/2026/week-02/2026-09-16-tuesday-waiver-wire-and-opening-market.md",
     "summary_path": "summaries/2026/week-02/2026-09-16-tuesday-waiver-wire-and-opening-market.json"
   },
-  "_fixture_note": "HAND-AUTHORED from the JSON handoff spec, not an object pulled from the bucket. It exists so the structured view can be exercised under USE_FIXTURES=1, and is shaped to hit the states real data will not reliably cover: a null and a real 0.0 in one column, a freshness array missing `odds`, a `blocks` section with both a named and a heading:null child, and an `insufficient` section. `markdown` and `markdown_sha256` ARE real -- the markdown is the exact bytes of the .md beside it and the digest is its true SHA-256. Replace with real objects when they are available."
+  "_fixture_note": "HAND-AUTHORED from the JSON handoff spec, not an object pulled from the bucket. It exists so the structured view can be exercised under USE_FIXTURES=1, and is shaped to hit the states real data will not reliably cover: a null and a real 0.0 in one column, a freshness array missing `odds`, a `blocks` section with both a named and a heading:null child, and an `insufficient` section. `markdown` and `markdown_sha256` ARE real -- the markdown is the exact bytes of the .md beside it and the digest is its true SHA-256. Replace with real objects when they are available. `waiver-settlements` carries 14 rows to exercise pagination's 4-page wrap-around, and `availability` carries 12 rows to prove the roster exemption renders unpaged."
 }

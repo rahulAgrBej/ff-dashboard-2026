@@ -7,6 +7,7 @@ import type {
   Section,
   TableColumn,
   TableRow,
+  TableSection,
 } from './reportJson';
 
 /**
@@ -149,6 +150,48 @@ export function isNumericColumn(column: TableColumn, rows: TableRow[]): boolean 
     if (typeof value === 'number') return Number.isFinite(value);
     return typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value));
   });
+}
+
+export const TABLE_PAGE_SIZE = 10;
+
+/**
+ * Table sections whose rows enumerate our own roster rather than a candidate
+ * pool. These are bounded by roster size and read as one list, so paging them
+ * is a cost with no benefit — a 16-player availability table split at 10 is
+ * strictly worse than scrolling it.
+ *
+ * Matched on `id`, never on heading text, for the reason stated at the top of
+ * this module: two reports build their headings at render time. Ids are
+ * matched exactly and by hyphen-separated segment, so an upstream
+ * `lineup-lock-roster` is caught without this list being rewritten each time
+ * a report type ships.
+ *
+ * Note this is only ever consulted above TABLE_PAGE_SIZE rows, so short
+ * roster tables never reach it.
+ */
+const UNPAGINATED_TABLE_IDS: ReadonlySet<string> = new Set([
+  'who-is-left',
+  'availability',
+  'live-margin',
+]);
+const UNPAGINATED_ID_SEGMENTS: ReadonlySet<string> = new Set([
+  'roster',
+  'lineup',
+  'starters',
+  'bench',
+]);
+
+function isRosterTable(id: string): boolean {
+  if (UNPAGINATED_TABLE_IDS.has(id)) return true;
+  return id.split('-').some((segment) => UNPAGINATED_ID_SEGMENTS.has(segment));
+}
+
+export function paginatesRows(section: TableSection): boolean {
+  return section.rows.length > TABLE_PAGE_SIZE && !isRosterTable(section.id);
+}
+
+export function pageCount(rowCount: number, pageSize: number = TABLE_PAGE_SIZE): number {
+  return Math.max(1, Math.ceil(rowCount / pageSize));
 }
 
 export interface DataChip {

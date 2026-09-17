@@ -1,5 +1,5 @@
 ---
-import { formatCell, isNumericColumn } from '../../lib/sections';
+import { formatCell, isNumericColumn, paginatesRows, pageCount, TABLE_PAGE_SIZE } from '../../lib/sections';
 import { renderInline } from '../../lib/render';
 import type { TableSection } from '../../lib/reportJson';
 
@@ -15,36 +15,47 @@ const notes = Array.isArray(section.notes) ? section.notes : [];
 // Computed once per table, not per cell: alignment is a property of the
 // column, and `isNumericColumn` walks every row to decide it.
 const numeric = columns.map((column) => isNumericColumn(column, rows));
+
+const paginated = paginatesRows(section);
+const pages = pageCount(rows.length);
 ---
 
-<div class="dttw-tablewrap">
-  <table class="dttw-tbl">
-    <thead>
-      <tr>
-        {columns.map((column, i) => (
-          <th class:list={[numeric[i] && 'dttw-tbl__num']} scope="col">{column.label}</th>
-        ))}
-      </tr>
-    </thead>
-    <tbody>
-      {rows.map((row) => (
+<div class="dttw-table" data-paged={paginated ? 'true' : undefined} data-page-size={TABLE_PAGE_SIZE} data-pages={pages}>
+  <div class="dttw-tablewrap">
+    <table class="dttw-tbl">
+      <thead>
         <tr>
-          {columns.map((column, i) => {
-            const cell = formatCell(row?.[column.key], column.type);
-            return (
-              <td
-                class:list={[numeric[i] && 'dttw-tbl__num', cell.isNull && 'dttw-tbl__null']}
-                data-align={numeric[i] ? undefined : 'left'}
-              >{cell.text}</td>
-            );
-          })}
+          {columns.map((column, i) => (
+            <th class:list={[numeric[i] && 'dttw-tbl__num']} scope="col">{column.label}</th>
+          ))}
         </tr>
-      ))}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {rows.map((row, rowIndex) => (
+          <tr data-page={paginated ? Math.floor(rowIndex / TABLE_PAGE_SIZE) : undefined}>
+            {columns.map((column, i) => {
+              const cell = formatCell(row?.[column.key], column.type);
+              return (
+                <td
+                  class:list={[numeric[i] && 'dttw-tbl__num', cell.isNull && 'dttw-tbl__null']}
+                  data-align={numeric[i] ? undefined : 'left'}
+                >{cell.text}</td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  {paginated && (
+    <div class="dttw-tpager" hidden>
+      <span class="dttw-tpager__count" data-page-count aria-live="polite">Page 1 of {pages}</span>
+      <button type="button" class="dttw-tpager__next" data-page-next>Next 10</button>
+    </div>
+  )}
+  {notes.length > 0 &&
+    notes.map((note) => <p class="dttw-tnote" set:html={renderInline(note)} />)}
 </div>
-{notes.length > 0 &&
-  notes.map((note) => <p class="dttw-tnote" set:html={renderInline(note)} />)}
 
 <style>
   /* A nine-column waiver table cannot fit the article's measure, so the
@@ -80,7 +91,7 @@ const numeric = columns.map((column) => isNumericColumn(column, rows));
     border-bottom: 1px solid var(--line-subtle);
   }
 
-  .dttw-tbl tbody tr:last-child td {
+  .dttw-table:not([data-paged]) .dttw-tbl tbody tr:last-child td {
     border-bottom: none;
   }
 
@@ -126,5 +137,43 @@ const numeric = columns.map((column) => isNumericColumn(column, rows));
   .dttw-tnote:last-child {
     border-bottom-left-radius: var(--radius-md);
     border-bottom-right-radius: var(--radius-md);
+  }
+
+  /* Sits directly under .dttw-tablewrap, outside its overflow-x box, so the
+     control never scrolls away on a wide table. Same border-continuation
+     treatment as .dttw-tnote so table → pager → note reads as one box. */
+  .dttw-tpager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid var(--line-subtle);
+    border-top: none;
+    background: var(--surface-sunken);
+    padding: 8px 16px;
+  }
+  .dttw-tpager:last-child {
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+  }
+
+  .dttw-tpager__count {
+    font: var(--type-caption);
+    color: var(--text-muted);
+  }
+
+  .dttw-tpager__next {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 5px;
+    font: var(--type-body-sm);
+    padding: 6px 11px;
+    border: 1px solid var(--line-default);
+    background: var(--white);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-control);
+  }
+  .dttw-tpager__next:hover {
+    background: var(--surface-hover);
   }
 </style>
