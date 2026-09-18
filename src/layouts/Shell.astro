@@ -132,7 +132,10 @@ const { title, activeTab, showTopbarActions = false, hasAside = false } = Astro.
   }
   .dttw-content {
     flex: 1;
+    /* min-width for the desktop row direction, max-width as a standing guard:
+       neither alone stops a wide child from widening the page. */
     min-width: 0;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
@@ -144,7 +147,12 @@ const { title, activeTab, showTopbarActions = false, hasAside = false } = Astro.
   @media (max-width: 700px) {
     .dttw-body {
       flex-direction: column;
-      padding: var(--space-6);
+      /* `align-items` governs the horizontal axis once this is a column, and
+         `flex-start` there means shrink-to-fit: the content column would size
+         itself to the widest table and push the whole page past the viewport.
+         The aside is what wanted `flex-start`, and it is hidden here anyway. */
+      align-items: stretch;
+      padding: var(--space-5);
       padding-bottom: var(--space-4);
     }
     .dttw-aside {

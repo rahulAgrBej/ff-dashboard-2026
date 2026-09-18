@@ -8,7 +8,7 @@ const { bodyHtml, rawMarkdown, cannotSeeHtml } = Astro.props as Props;
 ---
 
 <div class="dttw-view" data-view="rendered" id="dttw-view">
-  <article class="md md-mobile" set:html={bodyHtml} />
+  <article class="md" set:html={bodyHtml} />
   {cannotSeeHtml && (
     <div class="callout">
       <div class="flabel">What this report cannot see</div>

@@ -69,7 +69,13 @@ const pages = pageCount(rows.length);
   }
 
   .dttw-tbl {
-    width: 100%;
+    /* The pair is what makes the wrapper above actually scroll. `width: 100%`
+       alone does not: with nowrap headers the table's min-content still
+       exceeds a phone, so the wrapper inherits that width and pushes the page
+       wide instead of scrolling. `max-content` lets columns take their natural
+       width, `min-width` keeps narrow tables filling the box. */
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
   }
 
@@ -101,20 +107,27 @@ const pages = pageCount(rows.length);
 
   /* Numeric columns are mono and right-aligned so magnitudes line up. The
      declared column `type` alone does not earn this — `isNumericColumn`
-     checks the rows, because the type is unvalidated upstream. */
-  .dttw-tbl__num {
+     checks the rows, because the type is unvalidated upstream.
+
+     Written against `td`/`th` rather than the bare class: `.dttw-tbl td` is
+     the more specific selector once Astro scopes both, so a bare
+     `.dttw-tbl__num` loses every property the element rule also sets. */
+  .dttw-tbl td.dttw-tbl__num {
     font: var(--type-data);
     color: var(--text-primary);
+  }
+  .dttw-tbl__num {
     text-align: right;
   }
   .dttw-tbl th.dttw-tbl__num {
     color: var(--text-muted);
+    text-align: right;
   }
 
   /* The load-bearing rule of this whole view: a null cell says "no reading"
      in disabled grey and never renders as 0. A bye week's offense_pct is
      null; a real 0.0 is a real zero, and the two must not look alike. */
-  .dttw-tbl__null {
+  .dttw-tbl td.dttw-tbl__null {
     font: var(--type-data);
     color: var(--text-disabled);
   }
@@ -175,5 +188,24 @@ const pages = pageCount(rows.length);
   }
   .dttw-tpager__next:hover {
     background: var(--surface-hover);
+  }
+
+  /* Desktop cell padding is 32px of the ~335px a phone has. Matching the
+     density global.css already gives markdown tables means fewer columns
+     fall off the edge before the reader has to scroll for them. `td` keeps
+     wrapping — only the headers are nowrap, and that is enough to set the
+     column widths. */
+  @media (max-width: 700px) {
+    .dttw-tbl th,
+    .dttw-tbl td {
+      padding: var(--space-1) var(--space-3);
+    }
+    .dttw-tbl td {
+      font: var(--type-caption);
+    }
+    .dttw-tnote,
+    .dttw-tpager {
+      padding: var(--space-2) var(--space-3);
+    }
   }
 </style>

@@ -46,4 +46,12 @@ const { title, subtitle, padding = 'normal' } = Astro.props as Props;
     margin-top: 2px;
     margin-bottom: var(--space-3);
   }
+
+  /* Nested inside the shell's own padding, 20px here costs more of a phone's
+     width than the frame is worth. Same trade RosterNews already makes. */
+  @media (max-width: 700px) {
+    .dttw-card--normal {
+      padding: var(--space-4);
+    }
+  }
 </style>

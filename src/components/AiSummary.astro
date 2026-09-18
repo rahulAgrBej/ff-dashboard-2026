@@ -71,4 +71,10 @@ const { html, model, generatedAt, stale, priorReports = 0 } = Astro.props as Pro
   .dttw-ai__spacer {
     flex: 1;
   }
+
+  @media (max-width: 700px) {
+    .dttw-ai {
+      padding: var(--space-5) var(--space-4);
+    }
+  }
 </style>

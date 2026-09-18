@@ -153,24 +153,27 @@ button {
 .md td .stale {
   font: inherit;
 }
+/* Keyed on `.md` rather than an opt-in class: the homepage's summary and
+   report prose are the same rendered markdown as the archive's, and there is
+   no reason for the two surfaces to read at different sizes on a phone. */
 @media (max-width: 700px) {
-  .md-mobile p,
-  .md-mobile li {
+  .md p,
+  .md li {
     font: var(--type-body-sm);
   }
-  .md-mobile h2 {
+  .md h2 {
     margin: 20px 0 7px;
   }
   .md > :not(.md-table) {
     max-width: none;
   }
-  .md-mobile th,
-  .md-mobile td {
+  .md th,
+  .md td {
     font: var(--type-caption);
     padding: var(--space-1) var(--space-3);
   }
   /* The `font` shorthand above resets weight to 400. */
-  .md-mobile th {
+  .md th {
     font-weight: var(--fw-medium);
   }
 }
